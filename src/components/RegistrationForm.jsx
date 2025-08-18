@@ -2,12 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPhone, FaEnvelope, FaGraduationCap, FaVenusMars, FaHome, FaBriefcase, FaUtensils, FaUser, FaCreditCard } from 'react-icons/fa';
-import { loadStripe } from '@stripe/stripe-js';
+import { FaPhone, FaEnvelope, FaGraduationCap, FaVenusMars, FaHome, FaBriefcase, FaUtensils, FaUser } from 'react-icons/fa';
 import { API_BASE } from '../api';
 import Header from './Header';
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const DEGREE_OPTIONS = ['UG', 'PG'];
 const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
@@ -124,18 +121,11 @@ export default function GraduationRegistrationForm() {
       );
     }, 30);
 
-    // Check for session_id in URL after redirect
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get('session_id');
-    if (sessionId) {
-      completeRegistration(sessionId);
-    }
-
     return () => clearInterval(interval);
   }, []);
 
   const checkEmailUnique = async (email) => {
-    if (!email) return true;
+    if (!email) return true; // Email is optional
     try {
       const response = await axios.get(`${API_BASE}/check-email`, { params: { email } });
       return !response.data.exists;
@@ -187,31 +177,15 @@ export default function GraduationRegistrationForm() {
     }
   };
 
-  const handlePayment = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     if (!(await validateFields())) {
       toast.error('Please fix the errors in the form');
       return;
     }
 
     try {
-      const response = await axios.post(`${API_BASE}/create-checkout-session`, formData);
-      const stripe = await stripePromise;
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: response.data.id,
-      });
-      if (error) {
-        console.error('Stripe redirect error:', error);
-        toast.error('Failed to initiate payment');
-      }
-    } catch (err) {
-      console.error('Payment initiation error:', err);
-      toast.error(err.response?.data?.error || 'Failed to initiate payment');
-    }
-  };
-
-  const completeRegistration = async (sessionId) => {
-    try {
-      const response = await axios.post(`${API_BASE}/register`, { session_id: sessionId });
+      const response = await axios.post(`${API_BASE}/register`, formData);
       toast.success('Registration successful! ID: ' + response.data.id);
       setFormData({
         name: '',
@@ -231,11 +205,10 @@ export default function GraduationRegistrationForm() {
         companion_option: ''
       });
       setErrors({});
-      // Clear URL params
-      window.history.replaceState({}, document.title, window.location.pathname);
     } catch (err) {
-      console.error('Registration error:', err);
-      toast.error(err.response?.data?.error || 'Registration failed');
+      console.error(err);
+      const errorMsg = err.response?.data?.error || 'Registration failed. Try again.';
+      toast.error(errorMsg);
     }
   };
 
@@ -355,8 +328,7 @@ export default function GraduationRegistrationForm() {
                 <li>Indicate if you are pursuing higher studies; if yes, provide course and institution names.</li>
                 <li>Specify employment status and select lunch preference (VEG or NON-VEG).</li>
                 <li>Choose a companion option for lunch.</li>
-                <li>Review all entered data before proceeding to payment.</li>
-                <li>Complete the $10 registration fee payment via Stripe to finalize registration.</li>
+                <li>Review all entered data before submitting to ensure accuracy.</li>
               </ol>
             </div>
           </motion.div>
@@ -375,7 +347,7 @@ export default function GraduationRegistrationForm() {
               <FaGraduationCap className="text-3xl text-emerald-800" />
               Graduation Registration Form
             </motion.h2>
-            <div className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6" ref={formRef}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -707,8 +679,7 @@ export default function GraduationRegistrationForm() {
                 {errors.companion_option && <p className="text-red-600 text-sm mt-1">{errors.companion_option}</p>}
               </motion.div>
               <motion.button
-                type="button"
-                onClick={handlePayment}
+                type="submit"
                 whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(16,185,129,0.75)' }}
                 whileTap={{ scale: 0.97 }}
                 disabled={!isFormValid}
@@ -716,10 +687,10 @@ export default function GraduationRegistrationForm() {
                   !isFormValid ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
-                <FaCreditCard className="text-2xl" />
-                Proceed to Payment ($10)
+                <FaGraduationCap className="text-2xl" />
+                Submit Registration
               </motion.button>
-            </div>
+            </form>
           </motion.div>
         </motion.div>
       </div>
