@@ -2,57 +2,61 @@ import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPhone, FaEnvelope, FaGraduationCap, FaVenusMars, FaHome, FaBriefcase, FaUtensils, FaUser, FaCreditCard, FaInfoCircle, FaCheckCircle } from 'react-icons/fa';
+import { FaPhone, FaEnvelope, FaGraduationCap, FaVenusMars, FaHome, FaBriefcase, FaUtensils, FaUser, FaInfoCircle, FaCheckCircle, FaCamera, FaIdCard, FaFileAlt, FaSignature } from 'react-icons/fa';
 import { API_BASE } from '../api';
 import Header from './Header';
 
 const DEGREE_OPTIONS = ['UG', 'PG'];
 const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
 const LUNCH_OPTIONS = ['VEG', 'NON-VEG'];
+const COMMUNITY_OPTIONS = ['OC', 'BC', 'SC', 'ST', 'MBC'];
+const DISTRICT_OPTIONS = ['Dharmapuri', 'Krishnagiri', 'Namakkal', 'Salem'];
 const COMPANION_OPTIONS = ['1 Veg', '1 Non veg', '2 Veg', '2 Non Veg', '1 Veg and 1 Non veg'];
-const COURSE_OPTIONS = [
-  'B.A. English', 'B.A. Tamil', 'B.A. History', 'B.A. Economics', 'B.A. Political Science', 'B.A. Sociology',
-  'B.A. Journalism and Mass Communication', 'B.Sc. Mathematics', 'B.Sc. Physics', 'B.Sc. Chemistry',
-  'B.Sc. Computer Science', 'B.Sc. Information Technology', 'B.Sc. Biotechnology', 'B.Sc. Microbiology',
-  'B.Sc. Botany', 'B.Sc. Zoology', 'B.Sc. Statistics', 'B.Sc. Electronics', 'B.Sc. Biochemistry',
-  'B.Sc. Environmental Science', 'B.Com.', 'B.Com. (Computer Applications)', 'B.Com. (Accounting and Finance)',
-  'BBA', 'BCA', 'M.A. English', 'M.A. Tamil', 'M.A. History', 'M.A. Economics', 'M.A. Political Science',
-  'M.A. Sociology', 'M.A. Journalism and Mass Communication', 'M.Sc. Mathematics', 'M.Sc. Physics',
-  'M.Sc. Chemistry', 'M.Sc. Computer Science', 'M.Sc. Information Technology', 'M.Sc. Biotechnology',
-  'M.Sc. Microbiology', 'M.Sc. Botany', 'M.Sc. Zoology', 'M.Sc. Statistics', 'M.Sc. Electronics',
-  'M.Sc. Biochemistry', 'M.Sc. Environmental Science', 'M.Com.', 'MCA', 'MBA'
-];
 
 export default function GraduationRegistrationForm() {
   const initialFormData = {
-    name: '',
-    university_register_no: '',
-    college_roll_no: '',
-    degree: '',
-    course: '',
-    whatsapp_number: '',
-    email: '',
+    full_name: '',
+    date_of_birth: '',
     gender: '',
+    guardian_name: '',
+    nationality: '',
+    religion: '',
+    email: '',
+    mobile_number: '',
+    place_of_birth: '',
+    community: '',
+    mother_tongue: '',
+    applicant_photo: null,
+    aadhar_number: '',
+    aadhar_copy: null,
+    residence_certificate: null,
+    degree_name: '',
+    university_name: '',
+    degree_pattern: '',
+    convocation_year: '',
+    degree_certificate: null,
+    is_registered_graduate: 0,
+    other_university_certificate: null,
+    occupation: '',
     address: '',
-    pursuing_higher_studies: 0,
-    hs_course_name: '',
-    hs_institution_name: '',
-    employed: 0,
+    signature: null,
+    declaration: false,
     lunch_required: '',
     companion_option: ''
   };
+
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
   const [particles, setParticles] = useState([]);
-  const [paymentStatus, setPaymentStatus] = useState(null);
-  const [paymentDetails, setPaymentDetails] = useState(null);
   const [showGuidelines, setShowGuidelines] = useState(false);
   const [isValidated, setIsValidated] = useState(false);
   const formRef = useRef(null);
 
   const isFormValid = Object.entries(formData).every(([key, val]) => {
-    if (['college_roll_no', 'email', 'address', 'hs_course_name', 'hs_institution_name'].includes(key)) return true;
-    if (key === 'pursuing_higher_studies' || key === 'employed') return [0, 1].includes(val);
+    if (['email', 'address', 'other_university_certificate'].includes(key)) return true;
+    if (key === 'is_registered_graduate') return [0, 1].includes(val);
+    if (key === 'declaration') return val === true;
+    if (['applicant_photo', 'aadhar_copy', 'residence_certificate', 'degree_certificate', 'signature'].includes(key)) return val instanceof File;
     return String(val).trim();
   });
 
@@ -62,8 +66,8 @@ export default function GraduationRegistrationForm() {
       const parsedData = JSON.parse(savedFormData);
       setFormData({
         ...parsedData,
-        pursuing_higher_studies: parsedData.pursuing_higher_studies === 'Yes' ? 1 : 0,
-        employed: parsedData.employed === 'Yes' ? 1 : 0
+        is_registered_graduate: parsedData.is_registered_graduate === 'Yes' ? 1 : 0,
+        declaration: parsedData.declaration === 'true' || parsedData.declaration === true
       });
     }
 
@@ -101,43 +105,6 @@ export default function GraduationRegistrationForm() {
     return () => clearInterval(interval);
   }, []);
 
-  const loadRazorpayScript = () => {
-    return new Promise((resolve, reject) => {
-      if (window.Razorpay) {
-        resolve();
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Razorpay script'));
-      document.body.appendChild(script);
-    });
-  };
-
-  const verifyPayment = async (order_id, payment_id, signature) => {
-    try {
-      const response = await axios.post(`${API_BASE}/verify-payment`, {
-        order_id,
-        payment_id,
-        signature,
-      });
-      if (response.data.status === 'paid') {
-        setPaymentStatus('completed');
-        setPaymentDetails({ order_id, payment_id, signature });
-        toast.success('Payment successful! Please submit the form to complete registration.', { id: 'payment-success' });
-      } else {
-        setPaymentStatus('failed');
-        toast.error('Payment not completed. Please try again.', { id: 'payment-failed' });
-      }
-    } catch (err) {
-      console.error('Payment verification error:', err);
-      setPaymentStatus('failed');
-      toast.error('Failed to verify payment', { id: 'payment-error' });
-    }
-  };
-
   const checkEmailUnique = async (email) => {
     if (!email) return true;
     try {
@@ -149,47 +116,120 @@ export default function GraduationRegistrationForm() {
     }
   };
 
-  const checkRegisterNoUnique = async (registerNo) => {
-    try {
-      const response = await axios.get(`${API_BASE}/check-register-no`, { params: { university_register_no: registerNo } });
-      return response.data.exists === false;
-    } catch (err) {
-      console.error('Register number check error:', err);
-      toast.error('Failed to verify register number', { id: 'register-no-error' });
-      return false;
-    }
-  };
-
   const validateFields = async () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.university_register_no.trim()) newErrors.university_register_no = 'University Register Number is required';
-    if (!formData.degree) newErrors.degree = 'Degree is required';
-    if (!formData.course) newErrors.course = 'Course is required';
-    if (!formData.whatsapp_number || !/^\d{10}$/.test(formData.whatsapp_number)) {
-      newErrors.whatsapp_number = 'WhatsApp number must be exactly 10 digits';
-    }
+    if (!formData.full_name.trim()) newErrors.full_name = 'Full Name is required';
+    if (!formData.date_of_birth) newErrors.date_of_birth = 'Date of Birth is required';
+    if (!formData.gender) newErrors.gender = 'Gender is required';
+    if (!formData.guardian_name.trim()) newErrors.guardian_name = 'Guardian Name is required';
+    if (!formData.nationality.trim()) newErrors.nationality = 'Nationality is required';
+    if (!formData.religion.trim()) newErrors.religion = 'Religion is required';
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Valid email is required';
     }
-    if (!formData.gender) newErrors.gender = 'Gender is required';
-    if (![0, 1].includes(formData.pursuing_higher_studies)) {
-      newErrors.pursuing_higher_studies = 'Pursuing higher studies must be Yes or No';
+    if (!formData.mobile_number || !/^\d{10}$/.test(formData.mobile_number)) {
+      newErrors.mobile_number = 'Mobile number must be exactly 10 digits';
     }
-    if (formData.pursuing_higher_studies === 1 && !formData.hs_course_name.trim()) {
-      newErrors.hs_course_name = 'Course name is required when pursuing higher studies';
+    if (!formData.place_of_birth) newErrors.place_of_birth = 'Place of Birth is required';
+    if (!formData.community) newErrors.community = 'Community is required';
+    if (!formData.mother_tongue.trim()) newErrors.mother_tongue = 'Mother Tongue is required';
+    if (!formData.applicant_photo) newErrors.applicant_photo = 'Applicant Photo is required';
+    if (!formData.aadhar_number || !/^\d{12}$/.test(formData.aadhar_number)) {
+      newErrors.aadhar_number = 'Aadhar Number must be exactly 12 digits';
     }
-    if (formData.pursuing_higher_studies === 1 && !formData.hs_institution_name.trim()) {
-      newErrors.hs_institution_name = 'Institution name is required when pursuing higher studies';
+    if (!formData.aadhar_copy) newErrors.aadhar_copy = 'Aadhar Copy is required';
+    if (!formData.residence_certificate) newErrors.residence_certificate = 'Residence Certificate is required';
+    if (!formData.degree_name.trim()) newErrors.degree_name = 'Degree Name is required';
+    if (!formData.university_name.trim()) newErrors.university_name = 'University Name is required';
+    if (!formData.degree_pattern.trim()) newErrors.degree_pattern = 'Degree Pattern is required';
+    if (!formData.convocation_year.trim()) newErrors.convocation_year = 'Convocation Year is required';
+    if (!formData.degree_certificate) newErrors.degree_certificate = 'Degree Certificate is required';
+    if (formData.is_registered_graduate === 1 && !formData.other_university_certificate) {
+      newErrors.other_university_certificate = 'Other University Certificate is required';
     }
-    if (![0, 1].includes(formData.employed)) {
-      newErrors.employed = 'Employed status must be Yes or No';
+    if (!formData.occupation.trim()) newErrors.occupation = 'Occupation is required';
+    if (!formData.address.trim()) newErrors.address = 'Address is required';
+    if (!formData.signature) newErrors.signature = 'Signature is required';
+    if (!formData.declaration) newErrors.declaration = 'You must agree to the declaration';
+    if (!formData.lunch_required) newErrors.lunch_required = 'Lunch Preference is required';
+    if (!formData.companion_option) newErrors.companion_option = 'Companion Option is required';
+
+    // File size validations
+    if (formData.applicant_photo && formData.applicant_photo.size > 2 * 1024 * 1024) {
+      newErrors.applicant_photo = 'Applicant Photo must be less than 2MB';
     }
-    if (!formData.lunch_required) newErrors.lunch_required = 'Lunch preference is required';
-    if (!formData.companion_option) newErrors.companion_option = 'Companion option is required';
+    if (formData.aadhar_copy && formData.aadhar_copy.size > 2 * 1024 * 1024) {
+      newErrors.aadhar_copy = 'Aadhar Copy must be less than 2MB';
+    }
+    if (formData.residence_certificate && formData.residence_certificate.size > 5 * 1024 * 1024) {
+      newErrors.residence_certificate = 'Residence Certificate must be less than 5MB';
+    }
+    if (formData.degree_certificate && formData.degree_certificate.size > 5 * 1024 * 1024) {
+      newErrors.degree_certificate = 'Degree Certificate must be less than 5MB';
+    }
+    if (formData.other_university_certificate && formData.other_university_certificate.size > 5 * 1024 * 1024) {
+      newErrors.other_university_certificate = 'Other University Certificate must be less than 5MB';
+    }
+    if (formData.signature && formData.signature.size > 5 * 1024 * 1024) {
+      newErrors.signature = 'Signature must be less than 5MB';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (e) => {
+    const { name, value, type, files, checked } = e.target;
+    setFormData((prev) => {
+      const updatedData = {
+        ...prev,
+        [name]: type === 'file' ? files[0] : type === 'checkbox' ? checked : (name === 'is_registered_graduate' ? (value === 'Yes' ? 1 : 0) : value)
+      };
+      localStorage.setItem('graduationFormData', JSON.stringify({
+        ...updatedData,
+        applicant_photo: null,
+        aadhar_copy: null,
+        residence_certificate: null,
+        degree_certificate: null,
+        other_university_certificate: null,
+        signature: null
+      }));
+      return updatedData;
+    });
+    if ((type !== 'file' && value.trim()) || type === 'file' || type === 'checkbox') {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+    setIsValidated(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!isValidated) {
+      toast.error('Please validate details before submitting', { id: 'submit-not-validated-error' });
+      return;
+    }
+
+    try {
+      const formDataToSend = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value instanceof File) {
+          formDataToSend.append(key, value);
+        } else {
+          formDataToSend.append(key, value);
+        }
+      });
+
+      const response = await axios.post(`${API_BASE}/register`, formDataToSend, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('Registration successful! ID: ' + response.data.id, { id: 'register-success' });
+      setFormData(initialFormData);
+      setErrors({});
+      setIsValidated(false);
+      localStorage.removeItem('graduationFormData');
+    } catch (err) {
+      console.error('Registration error:', err);
+      toast.error(err.response?.data?.error || 'Registration failed', { id: 'register-error' });
+    }
   };
 
   const handleValidateDetails = async () => {
@@ -200,106 +240,17 @@ export default function GraduationRegistrationForm() {
 
     try {
       const isEmailValid = formData.email ? await checkEmailUnique(formData.email) : true;
-      const isRegisterNoValid = await checkRegisterNoUnique(formData.university_register_no);
-
       if (!isEmailValid) {
         setErrors((prev) => ({ ...prev, email: 'Email is already registered' }));
         toast.error('Email is already registered', { id: 'email-duplicate-error' });
         return;
       }
 
-      if (!isRegisterNoValid) {
-        setErrors((prev) => ({ ...prev, university_register_no: 'University Register Number is already registered' }));
-        toast.error('University Register Number is already registered', { id: 'register-no-duplicate-error' });
-        return;
-      }
-
       setIsValidated(true);
-      toast.success('Details validated successfully! You can now proceed to payment.', { id: 'validate-success' });
+      toast.success('Details validated successfully! You can now submit the form.', { id: 'validate-success' });
     } catch (err) {
       console.error('Validation error:', err);
       toast.error('Failed to validate details', { id: 'validate-error' });
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => {
-      const updatedData = {
-        ...prev,
-        [name]: name === 'pursuing_higher_studies' || name === 'employed' ? (value === 'Yes' ? 1 : 0) : value
-      };
-      localStorage.setItem('graduationFormData', JSON.stringify(updatedData));
-      return updatedData;
-    });
-    if (value.trim() || ['college_roll_no', 'email', 'address'].includes(name)) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-    setIsValidated(false); // Reset validation on change
-  };
-
-  const handlePayment = async () => {
-    if (!isValidated) {
-      toast.error('Please validate details before proceeding to payment', { id: 'payment-not-validated-error' });
-      return;
-    }
-
-    try {
-      await loadRazorpayScript();
-      const response = await axios.post(`${API_BASE}/create-checkout-session`, formData);
-      const { id: order_id, key_id } = response.data;
-
-      const options = {
-        key: key_id,
-        amount: 50000,
-        currency: 'INR',
-        name: 'Graduation Registration',
-        description: 'Graduation Registration Fee',
-        order_id: order_id,
-        handler: function (response) {
-          verifyPayment(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature);
-        },
-        prefill: {
-          name: formData.name,
-          email: formData.email || '',
-          contact: formData.whatsapp_number,
-        },
-        theme: {
-          color: '#3B82F6',
-        },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (err) {
-      console.error('Payment initiation error:', err);
-      toast.error(err.message || err.response?.data?.error || 'Failed to initiate payment', { id: 'payment-initiation-error' });
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (paymentStatus !== 'completed') {
-      toast.error('Please complete the payment before submitting the form', { id: 'submit-not-paid-error' });
-      return;
-    }
-
-    try {
-      const response = await axios.post(`${API_BASE}/register`, {
-        ...formData,
-        order_id: paymentDetails.order_id,
-        payment_id: paymentDetails.payment_id,
-        signature: paymentDetails.signature,
-      });
-      toast.success('Registration successful! ID: ' + response.data.id, { id: 'register-success' });
-      setFormData(initialFormData);
-      setErrors({});
-      setPaymentStatus(null);
-      setPaymentDetails(null);
-      setIsValidated(false);
-      localStorage.removeItem('graduationFormData');
-    } catch (err) {
-      console.error('Registration error:', err);
-      toast.error(err.response?.data?.error || 'Registration failed', { id: 'register-error' });
     }
   };
 
@@ -522,26 +473,6 @@ export default function GraduationRegistrationForm() {
         >
           Graduation Registration Form
         </motion.h1>
-        {paymentStatus === 'completed' && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-8 text-2xl font-poppins text-blue-800 font-semibold"
-          >
-            Payment Completed! Please submit the form to finalize registration.
-          </motion.div>
-        )}
-        {paymentStatus === 'failed' && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-8 text-2xl font-poppins text-red-600 font-semibold"
-          >
-            Payment Failed. Please try again.
-          </motion.div>
-        )}
         {isValidated && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -549,7 +480,7 @@ export default function GraduationRegistrationForm() {
             transition={{ duration: 0.6 }}
             className="text-center mb-8 text-2xl font-poppins text-green-600 font-semibold"
           >
-            Details Validated! You can now proceed to payment.
+            Details Validated! You can now submit the form.
           </motion.div>
         )}
         <motion.div
@@ -591,18 +522,18 @@ export default function GraduationRegistrationForm() {
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
                     <FaUser className="text-blue-600 text-2xl" />
-                    Full Name (Uppercase)
+                    Full Name (As in Degree Certificate)
                   </label>
                   <input
                     type="text"
-                    name="name"
-                    value={formData.name}
+                    name="full_name"
+                    value={formData.full_name}
                     onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
                     placeholder="Enter full name"
                     required
                   />
-                  {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
+                  {errors.full_name && <p className="text-red-600 text-sm mt-1">{errors.full_name}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -611,18 +542,17 @@ export default function GraduationRegistrationForm() {
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
                     <FaGraduationCap className="text-blue-600 text-2xl" />
-                    University Register Number
+                    Date of Birth
                   </label>
                   <input
-                    type="text"
-                    name="university_register_no"
-                    value={formData.university_register_no}
+                    type="date"
+                    name="date_of_birth"
+                    value={formData.date_of_birth}
                     onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
-                    placeholder="Enter university register number"
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
                     required
                   />
-                  {errors.university_register_no && <p className="text-red-600 text-sm mt-1">{errors.university_register_no}</p>}
+                  {errors.date_of_birth && <p className="text-red-600 text-sm mt-1">{errors.date_of_birth}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -632,18 +562,22 @@ export default function GraduationRegistrationForm() {
                   transition={{ duration: 0.5, delay: 0.7 }}
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaGraduationCap className="text-blue-600 text-2xl" />
-                    College Roll Number (Optional)
+                    <FaVenusMars className="text-blue-600 text-2xl" />
+                    Gender
                   </label>
-                  <input
-                    type="text"
-                    name="college_roll_no"
-                    value={formData.college_roll_no}
+                  <select
+                    name="gender"
+                    value={formData.gender}
                     onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
-                    placeholder="Enter college roll number"
-                  />
-                  {errors.college_roll_no && <p className="text-red-600 text-sm mt-1">{errors.college_roll_no}</p>}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
+                    required
+                  >
+                    <option value="">-- Select Gender --</option>
+                    {GENDER_OPTIONS.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                  {errors.gender && <p className="text-red-600 text-sm mt-1">{errors.gender}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -651,22 +585,19 @@ export default function GraduationRegistrationForm() {
                   transition={{ duration: 0.5, delay: 0.8 }}
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaGraduationCap className="text-blue-600 text-2xl" />
-                    Degree
+                    <FaUser className="text-blue-600 text-2xl" />
+                    Name of Father/Husband/Mother/Wife
                   </label>
-                  <select
-                    name="degree"
-                    value={formData.degree}
+                  <input
+                    type="text"
+                    name="guardian_name"
+                    value={formData.guardian_name}
                     onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter guardian name"
                     required
-                  >
-                    <option value="">-- Select Degree --</option>
-                    {DEGREE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  {errors.degree && <p className="text-red-600 text-sm mt-1">{errors.degree}</p>}
+                  />
+                  {errors.guardian_name && <p className="text-red-600 text-sm mt-1">{errors.guardian_name}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -676,22 +607,19 @@ export default function GraduationRegistrationForm() {
                   transition={{ duration: 0.5, delay: 0.9 }}
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaGraduationCap className="text-blue-600 text-2xl" />
-                    Course
+                    <FaUser className="text-blue-600 text-2xl" />
+                    Nationality
                   </label>
-                  <select
-                    name="course"
-                    value={formData.course}
+                  <input
+                    type="text"
+                    name="nationality"
+                    value={formData.nationality}
                     onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter nationality"
                     required
-                  >
-                    <option value="">-- Select Course --</option>
-                    {COURSE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  {errors.course && <p className="text-red-600 text-sm mt-1">{errors.course}</p>}
+                  />
+                  {errors.nationality && <p className="text-red-600 text-sm mt-1">{errors.nationality}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -699,21 +627,19 @@ export default function GraduationRegistrationForm() {
                   transition={{ duration: 0.5, delay: 1.0 }}
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaPhone className="text-blue-600 text-2xl" />
-                    WhatsApp Number (10 digits)
+                    <FaUser className="text-blue-600 text-2xl" />
+                    Religion
                   </label>
                   <input
-                    type="tel"
-                    name="whatsapp_number"
-                    value={formData.whatsapp_number}
+                    type="text"
+                    name="religion"
+                    value={formData.religion}
                     onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
-                    placeholder="Enter 10-digit WhatsApp number"
+                    placeholder="Enter religion"
                     required
-                    maxLength="10"
-                    pattern="\d{10}"
                   />
-                  {errors.whatsapp_number && <p className="text-red-600 text-sm mt-1">{errors.whatsapp_number}</p>}
+                  {errors.religion && <p className="text-red-600 text-sm mt-1">{errors.religion}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -742,115 +668,112 @@ export default function GraduationRegistrationForm() {
                   transition={{ duration: 0.5, delay: 1.2 }}
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaVenusMars className="text-blue-600 text-2xl" />
-                    Gender
+                    <FaPhone className="text-blue-600 text-2xl" />
+                    Mobile Number (10 digits)
                   </label>
-                  <select
-                    name="gender"
-                    value={formData.gender}
+                  <input
+                    type="tel"
+                    name="mobile_number"
+                    value={formData.mobile_number}
                     onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter 10-digit mobile number"
+                    required
+                    maxLength="10"
+                    pattern="\d{10}"
+                  />
+                  {errors.mobile_number && <p className="text-red-600 text-sm mt-1">{errors.mobile_number}</p>}
+                </motion.div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 1.3 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaHome className="text-blue-600 text-2xl" />
+                    Place of Birth (District)
+                  </label>
+                  <select
+                    name="place_of_birth"
+                    value={formData.place_of_birth}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
                     required
                   >
-                    <option value="">-- Select Gender --</option>
-                    {GENDER_OPTIONS.map((option) => (
+                    <option value="">-- Select District --</option>
+                    {DISTRICT_OPTIONS.map((option) => (
                       <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
-                  {errors.gender && <p className="text-red-600 text-sm mt-1">{errors.gender}</p>}
+                  {errors.place_of_birth && <p className="text-red-600 text-sm mt-1">{errors.place_of_birth}</p>}
                 </motion.div>
-              </div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 1.3 }}
-              >
-                <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                  <FaHome className="text-blue-600 text-2xl" />
-                  Address (Optional)
-                </label>
-                <textarea
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
-                  placeholder="Enter address"
-                  rows="4"
-                />
-                {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address}</p>}
-              </motion.div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 1.4 }}
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaGraduationCap className="text-blue-600 text-2xl" />
-                    Pursuing Higher Studies
+                    <FaUser className="text-blue-600 text-2xl" />
+                    Community
                   </label>
-                  <div className="flex gap-4">
-                    {['Yes', 'No'].map((option) => (
-                      <label key={option} className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="pursuing_higher_studies"
-                          value={option}
-                          checked={formData.pursuing_higher_studies === (option === 'Yes' ? 1 : 0)}
-                          onChange={handleChange}
-                          className="h-5 w-5 text-blue-600 border-blue-200 focus:ring-blue-400"
-                        />
-                        <span className="font-poppins text-blue-900">{option}</span>
-                      </label>
-                    ))}
-                  </div>
-                  {errors.pursuing_higher_studies && <p className="text-red-600 text-sm mt-1">{errors.pursuing_higher_studies}</p>}
-                </motion.div>
-                {formData.pursuing_higher_studies === 1 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 1.5 }}
+                  <select
+                    name="community"
+                    value={formData.community}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
+                    required
                   >
-                    <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                      <FaGraduationCap className="text-blue-600 text-2xl" />
-                      Higher Studies Course Name
-                    </label>
-                    <input
-                      type="text"
-                      name="hs_course_name"
-                      value={formData.hs_course_name}
-                      onChange={handleChange}
-                      className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
-                      placeholder="Enter course name"
-                      required
-                    />
-                    {errors.hs_course_name && <p className="text-red-600 text-sm mt-1">{errors.hs_course_name}</p>}
-                  </motion.div>
-                )}
+                    <option value="">-- Select Community --</option>
+                    {COMMUNITY_OPTIONS.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                  {errors.community && <p className="text-red-600 text-sm mt-1">{errors.community}</p>}
+                </motion.div>
               </div>
-              {formData.pursuing_higher_studies === 1 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 1.5 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaUser className="text-blue-600 text-2xl" />
+                    Mother Tongue
+                  </label>
+                  <input
+                    type="text"
+                    name="mother_tongue"
+                    value={formData.mother_tongue}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter mother tongue"
+                    required
+                  />
+                  {errors.mother_tongue && <p className="text-red-600 text-sm mt-1">{errors.mother_tongue}</p>}
+                </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 1.6 }}
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaGraduationCap className="text-blue-600 text-2xl" />
-                    Higher Studies Institution Name
+                    <FaCamera className="text-blue-600 text-2xl" />
+                    Applicant Photo (Max 2MB)
                   </label>
                   <input
-                    type="text"
-                    name="hs_institution_name"
-                    value={formData.hs_institution_name}
+                    type="file"
+                    name="applicant_photo"
+                    accept="image/*"
                     onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
-                    placeholder="Enter institution name"
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
                     required
                   />
-                  {errors.hs_institution_name && <p className="text-red-600 text-sm mt-1">{errors.hs_institution_name}</p>}
+                  {errors.applicant_photo && <p className="text-red-600 text-sm mt-1">{errors.applicant_photo}</p>}
                 </motion.div>
-              )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -858,17 +781,184 @@ export default function GraduationRegistrationForm() {
                   transition={{ duration: 0.5, delay: 1.7 }}
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaBriefcase className="text-blue-600 text-2xl" />
-                    Employed
+                    <FaIdCard className="text-blue-600 text-2xl" />
+                    Aadhar Number (12 digits)
+                  </label>
+                  <input
+                    type="text"
+                    name="aadhar_number"
+                    value={formData.aadhar_number}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter 12-digit Aadhar number"
+                    required
+                    maxLength="12"
+                    pattern="\d{12}"
+                  />
+                  {errors.aadhar_number && <p className="text-red-600 text-sm mt-1">{errors.aadhar_number}</p>}
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 1.8 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaFileAlt className="text-blue-600 text-2xl" />
+                    Aadhar Copy (Max 2MB)
+                  </label>
+                  <input
+                    type="file"
+                    name="aadhar_copy"
+                    accept="image/*,application/pdf"
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
+                    required
+                  />
+                  {errors.aadhar_copy && <p className="text-red-600 text-sm mt-1">{errors.aadhar_copy}</p>}
+                </motion.div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 1.9 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaFileAlt className="text-blue-600 text-2xl" />
+                    Residence/Nativity Certificate (Max 5MB)
+                  </label>
+                  <input
+                    type="file"
+                    name="residence_certificate"
+                    accept="image/*,application/pdf"
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
+                    required
+                  />
+                  {errors.residence_certificate && <p className="text-red-600 text-sm mt-1">{errors.residence_certificate}</p>}
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 2.0 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaGraduationCap className="text-blue-600 text-2xl" />
+                    Name of Degree/Degrees
+                  </label>
+                  <input
+                    type="text"
+                    name="degree_name"
+                    value={formData.degree_name}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter degree name(s)"
+                    required
+                  />
+                  {errors.degree_name && <p className="text-red-600 text-sm mt-1">{errors.degree_name}</p>}
+                </motion.div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 2.1 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaGraduationCap className="text-blue-600 text-2xl" />
+                    University Name
+                  </label>
+                  <input
+                    type="text"
+                    name="university_name"
+                    value={formData.university_name}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter university name"
+                    required
+                  />
+                  {errors.university_name && <p className="text-red-600 text-sm mt-1">{errors.university_name}</p>}
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 2.2 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaGraduationCap className="text-blue-600 text-2xl" />
+                    Degree Pattern (e.g., 10+2+3)
+                  </label>
+                  <input
+                    type="text"
+                    name="degree_pattern"
+                    value={formData.degree_pattern}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter degree pattern"
+                    required
+                  />
+                  {errors.degree_pattern && <p className="text-red-600 text-sm mt-1">{errors.degree_pattern}</p>}
+                </motion.div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 2.3 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaGraduationCap className="text-blue-600 text-2xl" />
+                    Convocation Year
+                  </label>
+                  <input
+                    type="text"
+                    name="convocation_year"
+                    value={formData.convocation_year}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter convocation year"
+                    required
+                  />
+                  {errors.convocation_year && <p className="text-red-600 text-sm mt-1">{errors.convocation_year}</p>}
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 2.4 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaFileAlt className="text-blue-600 text-2xl" />
+                    Degree Certificate (Max 5MB)
+                  </label>
+                  <input
+                    type="file"
+                    name="degree_certificate"
+                    accept="image/*,application/pdf"
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
+                    required
+                  />
+                  {errors.degree_certificate && <p className="text-red-600 text-sm mt-1">{errors.degree_certificate}</p>}
+                </motion.div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 2.5 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaGraduationCap className="text-blue-600 text-2xl" />
+                    Registered Graduate of Other University
                   </label>
                   <div className="flex gap-4">
                     {['Yes', 'No'].map((option) => (
                       <label key={option} className="flex items-center gap-2">
                         <input
                           type="radio"
-                          name="employed"
+                          name="is_registered_graduate"
                           value={option}
-                          checked={formData.employed === (option === 'Yes' ? 1 : 0)}
+                          checked={formData.is_registered_graduate === (option === 'Yes' ? 1 : 0)}
                           onChange={handleChange}
                           className="h-5 w-5 text-blue-600 border-blue-200 focus:ring-blue-400"
                         />
@@ -876,12 +966,96 @@ export default function GraduationRegistrationForm() {
                       </label>
                     ))}
                   </div>
-                  {errors.employed && <p className="text-red-600 text-sm mt-1">{errors.employed}</p>}
+                  {errors.is_registered_graduate && <p className="text-red-600 text-sm mt-1">{errors.is_registered_graduate}</p>}
+                </motion.div>
+                {formData.is_registered_graduate === 1 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 2.6 }}
+                  >
+                    <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                      <FaFileAlt className="text-blue-600 text-2xl" />
+                      Other University Certificate (Max 5MB)
+                    </label>
+                    <input
+                      type="file"
+                      name="other_university_certificate"
+                      accept="image/*,application/pdf"
+                      onChange={handleChange}
+                      className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
+                      required
+                    />
+                    {errors.other_university_certificate && <p className="text-red-600 text-sm mt-1">{errors.other_university_certificate}</p>}
+                  </motion.div>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 2.7 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaBriefcase className="text-blue-600 text-2xl" />
+                    Present Occupation
+                  </label>
+                  <input
+                    type="text"
+                    name="occupation"
+                    value={formData.occupation}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter current occupation"
+                    required
+                  />
+                  {errors.occupation && <p className="text-red-600 text-sm mt-1">{errors.occupation}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 1.8 }}
+                  transition={{ duration: 0.5, delay: 2.8 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaHome className="text-blue-600 text-2xl" />
+                    Address for Communication
+                  </label>
+                  <textarea
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    placeholder="Enter address"
+                    rows="4"
+                    required
+                  />
+                  {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address}</p>}
+                </motion.div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 2.9 }}
+                >
+                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                    <FaSignature className="text-blue-600 text-2xl" />
+                    Signature (Max 5MB)
+                  </label>
+                  <input
+                    type="file"
+                    name="signature"
+                    accept="image/*"
+                    onChange={handleChange}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
+                    required
+                  />
+                  {errors.signature && <p className="text-red-600 text-sm mt-1">{errors.signature}</p>}
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 3.0 }}
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
                     <FaUtensils className="text-blue-600 text-2xl" />
@@ -891,7 +1065,7 @@ export default function GraduationRegistrationForm() {
                     name="lunch_required"
                     value={formData.lunch_required}
                     onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
                     required
                   >
                     <option value="">-- Select Lunch Preference --</option>
@@ -905,7 +1079,7 @@ export default function GraduationRegistrationForm() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 1.9 }}
+                transition={{ duration: 0.5, delay: 3.1 }}
               >
                 <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
                   <FaUser className="text-blue-600 text-2xl" />
@@ -915,7 +1089,7 @@ export default function GraduationRegistrationForm() {
                   name="companion_option"
                   value={formData.companion_option}
                   onChange={handleChange}
-                  className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                  className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
                   required
                 >
                   <option value="">-- Select Companion Option --</option>
@@ -924,6 +1098,30 @@ export default function GraduationRegistrationForm() {
                   ))}
                 </select>
                 {errors.companion_option && <p className="text-red-600 text-sm mt-1">{errors.companion_option}</p>}
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 3.2 }}
+              >
+                <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
+                  <FaCheckCircle className="text-blue-600 text-2xl" />
+                  Declaration
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="declaration"
+                    checked={formData.declaration}
+                    onChange={handleChange}
+                    className="h-5 w-5 text-blue-600 border-blue-200 focus:ring-blue-400"
+                    required
+                  />
+                  <span className="font-poppins text-blue-900 text-lg">
+                    I declare the above information is true to the best of my knowledge and if it is found to be untrue, my claim may be considered invalid.
+                  </span>
+                </label>
+                {errors.declaration && <p className="text-red-600 text-sm mt-1">{errors.declaration}</p>}
               </motion.div>
               <motion.button
                 type="button"
@@ -937,19 +1135,6 @@ export default function GraduationRegistrationForm() {
                 Validate Details
               </motion.button>
               {isValidated && (
-                <motion.button
-                  type="button"
-                  onClick={handlePayment}
-                  whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(59,130,246,0.8)' }}
-                  whileTap={{ scale: 0.97 }}
-                  disabled={paymentStatus === 'completed'}
-                  className={`w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-4 rounded-xl font-bold font-poppins text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 mt-4 ${paymentStatus === 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <FaCreditCard className="text-2xl" />
-                  Proceed to Payment (₹500)
-                </motion.button>
-              )}
-              {paymentStatus === 'completed' && (
                 <motion.button
                   type="button"
                   onClick={handleSubmit}
@@ -994,17 +1179,21 @@ export default function GraduationRegistrationForm() {
                   <div className="space-y-6 text-blue-800 font-poppins text-lg">
                     <h4 className="text-xl font-semibold text-blue-800">Step-by-Step Form Filling Instructions:</h4>
                     <ol className="list-decimal ml-6 space-y-4">
-                      <li>Enter your full name in uppercase letters.</li>
-                      <li>Provide your university register number and college roll number (if applicable).</li>
-                      <li>Select your degree (UG or PG) and choose your course from the dropdown.</li>
-                      <li>Enter a 10-digit WhatsApp number and a unique email (email is optional).</li>
-                      <li>Select your gender and provide your address (address is optional).</li>
-                      <li>Indicate if you are pursuing higher studies; if yes, provide course and institution names.</li>
-                      <li>Specify employment status and select lunch preference (VEG or NON-VEG).</li>
-                      <li>Choose a companion option for lunch.</li>
-                      <li>Click "Validate Details" to verify your details are unique.</li>
-                      <li>After successful validation, proceed to payment of ₹500 via Razorpay.</li>
-                      <li>After successful payment, submit the form to finalize registration.</li>
+                      <li>Enter your full name as it appears in the degree certificate.</li>
+                      <li>Provide your date of birth and select your gender.</li>
+                      <li>Enter the name of your father/husband/mother/wife, nationality, and religion.</li>
+                      <li>Provide a unique email (optional) and a 10-digit mobile number.</li>
+                      <li>Select your place of birth (district), community, and mother tongue.</li>
+                      <li>Upload a passport-size photo (max 2MB), Aadhar card (max 2MB), and residence certificate (max 5MB).</li>
+                      <li>Enter degree name(s), university name, degree pattern (e.g., 10+2+3), and convocation year.</li>
+                      <li>Upload a self-attested degree certificate (max 5MB).</li>
+                      <li>Indicate if you are a registered graduate of another university; if yes, upload the certificate (max 5MB).</li>
+                      <li>Provide your current occupation and address for communication.</li>
+                      <li>Upload your signature (max 5MB).</li>
+                      <li>Select lunch preference and companion option.</li>
+                      <li>Agree to the declaration.</li>
+                      <li>Click "Validate Details" to verify your details.</li>
+                      <li>After successful validation, submit the form to finalize registration.</li>
                     </ol>
                   </div>
                 </motion.div>
