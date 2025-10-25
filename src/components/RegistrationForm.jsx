@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaPhone, FaEnvelope, FaGraduationCap, FaVenusMars, FaHome, FaBriefcase, FaUtensils, FaUser, FaInfoCircle, FaCheckCircle, FaCamera, FaIdCard, FaFileAlt, FaSignature } from 'react-icons/fa';
 import { API_BASE } from '../api';
 import Header from './Header';
+import PayDemo from './PayDemo';
 
 const DEGREE_OPTIONS = ['UG', 'PG'];
 const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
@@ -49,7 +50,6 @@ export default function GraduationRegistrationForm() {
   const [errors, setErrors] = useState({});
   const [particles, setParticles] = useState([]);
   const [showGuidelines, setShowGuidelines] = useState(false);
-  const [isValidated, setIsValidated] = useState(false);
   const formRef = useRef(null);
 
   const isFormValid = Object.entries(formData).every(([key, val]) => {
@@ -61,16 +61,6 @@ export default function GraduationRegistrationForm() {
   });
 
   useEffect(() => {
-    const savedFormData = localStorage.getItem('graduationFormData');
-    if (savedFormData) {
-      const parsedData = JSON.parse(savedFormData);
-      setFormData({
-        ...parsedData,
-        is_registered_graduate: parsedData.is_registered_graduate === 'Yes' ? 1 : 0,
-        declaration: parsedData.declaration === 'true' || parsedData.declaration === true
-      });
-    }
-
     const generateParticles = () => {
       const newParticles = Array.from({ length: 50 }, () => ({
         id: Math.random(),
@@ -105,109 +95,18 @@ export default function GraduationRegistrationForm() {
     return () => clearInterval(interval);
   }, []);
 
-  const checkEmailUnique = async (email) => {
-    if (!email) return true;
-    try {
-      const response = await axios.get(`${API_BASE}/check-email`, { params: { email } });
-      return !response.data.exists;
-    } catch (err) {
-      console.error('Email check error:', err);
-      return false;
-    }
-  };
-
-  const validateFields = async () => {
-    const newErrors = {};
-    if (!formData.full_name.trim()) newErrors.full_name = 'Full Name is required';
-    if (!formData.date_of_birth) newErrors.date_of_birth = 'Date of Birth is required';
-    if (!formData.gender) newErrors.gender = 'Gender is required';
-    if (!formData.guardian_name.trim()) newErrors.guardian_name = 'Guardian Name is required';
-    if (!formData.nationality.trim()) newErrors.nationality = 'Nationality is required';
-    if (!formData.religion.trim()) newErrors.religion = 'Religion is required';
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Valid email is required';
-    }
-    if (!formData.mobile_number || !/^\d{10}$/.test(formData.mobile_number)) {
-      newErrors.mobile_number = 'Mobile number must be exactly 10 digits';
-    }
-    if (!formData.place_of_birth) newErrors.place_of_birth = 'Place of Birth is required';
-    if (!formData.community) newErrors.community = 'Community is required';
-    if (!formData.mother_tongue.trim()) newErrors.mother_tongue = 'Mother Tongue is required';
-    if (!formData.applicant_photo) newErrors.applicant_photo = 'Applicant Photo is required';
-    if (!formData.aadhar_number || !/^\d{12}$/.test(formData.aadhar_number)) {
-      newErrors.aadhar_number = 'Aadhar Number must be exactly 12 digits';
-    }
-    if (!formData.aadhar_copy) newErrors.aadhar_copy = 'Aadhar Copy is required';
-    if (!formData.residence_certificate) newErrors.residence_certificate = 'Residence Certificate is required';
-    if (!formData.degree_name.trim()) newErrors.degree_name = 'Degree Name is required';
-    if (!formData.university_name.trim()) newErrors.university_name = 'University Name is required';
-    if (!formData.degree_pattern.trim()) newErrors.degree_pattern = 'Degree Pattern is required';
-    if (!formData.convocation_year.trim()) newErrors.convocation_year = 'Convocation Year is required';
-    if (!formData.degree_certificate) newErrors.degree_certificate = 'Degree Certificate is required';
-    if (formData.is_registered_graduate === 1 && !formData.other_university_certificate) {
-      newErrors.other_university_certificate = 'Other University Certificate is required';
-    }
-    if (!formData.occupation.trim()) newErrors.occupation = 'Occupation is required';
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
-    if (!formData.signature) newErrors.signature = 'Signature is required';
-    if (!formData.declaration) newErrors.declaration = 'You must agree to the declaration';
-    if (!formData.lunch_required) newErrors.lunch_required = 'Lunch Preference is required';
-    if (!formData.companion_option) newErrors.companion_option = 'Companion Option is required';
-
-    // File size validations
-    if (formData.applicant_photo && formData.applicant_photo.size > 2 * 1024 * 1024) {
-      newErrors.applicant_photo = 'Applicant Photo must be less than 2MB';
-    }
-    if (formData.aadhar_copy && formData.aadhar_copy.size > 2 * 1024 * 1024) {
-      newErrors.aadhar_copy = 'Aadhar Copy must be less than 2MB';
-    }
-    if (formData.residence_certificate && formData.residence_certificate.size > 5 * 1024 * 1024) {
-      newErrors.residence_certificate = 'Residence Certificate must be less than 5MB';
-    }
-    if (formData.degree_certificate && formData.degree_certificate.size > 5 * 1024 * 1024) {
-      newErrors.degree_certificate = 'Degree Certificate must be less than 5MB';
-    }
-    if (formData.other_university_certificate && formData.other_university_certificate.size > 5 * 1024 * 1024) {
-      newErrors.other_university_certificate = 'Other University Certificate must be less than 5MB';
-    }
-    if (formData.signature && formData.signature.size > 5 * 1024 * 1024) {
-      newErrors.signature = 'Signature must be less than 5MB';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleChange = (e) => {
     const { name, value, type, files, checked } = e.target;
-    setFormData((prev) => {
-      const updatedData = {
-        ...prev,
-        [name]: type === 'file' ? files[0] : type === 'checkbox' ? checked : (name === 'is_registered_graduate' ? (value === 'Yes' ? 1 : 0) : value)
-      };
-      localStorage.setItem('graduationFormData', JSON.stringify({
-        ...updatedData,
-        applicant_photo: null,
-        aadhar_copy: null,
-        residence_certificate: null,
-        degree_certificate: null,
-        other_university_certificate: null,
-        signature: null
-      }));
-      return updatedData;
-    });
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'file' ? files[0] : type === 'checkbox' ? checked : (name === 'is_registered_graduate' ? (value === 'Yes' ? 1 : 0) : value)
+    }));
     if ((type !== 'file' && value.trim()) || type === 'file' || type === 'checkbox') {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
-    setIsValidated(false);
   };
 
   const handleSubmit = async () => {
-    if (!isValidated) {
-      toast.error('Please validate details before submitting', { id: 'submit-not-validated-error' });
-      return;
-    }
-
     try {
       const formDataToSend = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
@@ -224,33 +123,9 @@ export default function GraduationRegistrationForm() {
       toast.success('Registration successful! ID: ' + response.data.id, { id: 'register-success' });
       setFormData(initialFormData);
       setErrors({});
-      setIsValidated(false);
-      localStorage.removeItem('graduationFormData');
     } catch (err) {
       console.error('Registration error:', err);
       toast.error(err.response?.data?.error || 'Registration failed', { id: 'register-error' });
-    }
-  };
-
-  const handleValidateDetails = async () => {
-    if (!(await validateFields())) {
-      toast.error('Please fix the errors in the form', { id: 'validate-fields-error' });
-      return;
-    }
-
-    try {
-      const isEmailValid = formData.email ? await checkEmailUnique(formData.email) : true;
-      if (!isEmailValid) {
-        setErrors((prev) => ({ ...prev, email: 'Email is already registered' }));
-        toast.error('Email is already registered', { id: 'email-duplicate-error' });
-        return;
-      }
-
-      setIsValidated(true);
-      toast.success('Details validated successfully! You can now submit the form.', { id: 'validate-success' });
-    } catch (err) {
-      console.error('Validation error:', err);
-      toast.error('Failed to validate details', { id: 'validate-error' });
     }
   };
 
@@ -473,16 +348,6 @@ export default function GraduationRegistrationForm() {
         >
           Graduation Registration Form
         </motion.h1>
-        {isValidated && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-8 text-2xl font-poppins text-green-600 font-semibold"
-          >
-            Details Validated! You can now submit the form.
-          </motion.div>
-        )}
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1125,27 +990,16 @@ export default function GraduationRegistrationForm() {
               </motion.div>
               <motion.button
                 type="button"
-                onClick={handleValidateDetails}
+                onClick={handleSubmit}
                 whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(59,130,246,0.8)' }}
                 whileTap={{ scale: 0.97 }}
-                disabled={!isFormValid || isValidated}
-                className={`w-full bg-gradient-to-r from-green-600 to-green-400 text-white py-4 rounded-xl font-bold font-poppins text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 ${!isFormValid || isValidated ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={!isFormValid}
+                className={`w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-4 rounded-xl font-bold font-poppins text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 ${!isFormValid ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <FaCheckCircle className="text-2xl" />
-                Validate Details
+                <FaGraduationCap className="text-2xl" />
+                Submit Registration
               </motion.button>
-              {isValidated && (
-                <motion.button
-                  type="button"
-                  onClick={handleSubmit}
-                  whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(59,130,246,0.8)' }}
-                  whileTap={{ scale: 0.97 }}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-4 rounded-xl font-bold font-poppins text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 mt-4"
-                >
-                  <FaGraduationCap className="text-2xl" />
-                  Submit Registration
-                </motion.button>
-              )}
+              <PayDemo/>
             </div>
           </motion.div>
           <AnimatePresence>
