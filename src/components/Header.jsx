@@ -54,7 +54,7 @@ function Header() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }}
-        className="fixed top-0 left-0 right-0 h-24 bg-gradient-to-r from-blue-900 to-black header-modern  flex items-center justify-between px-8 lg:px-12 relative overflow-hidden"
+        className="fixed top-0 left-0 right-0 min-h-[80px] sm:min-h-[96px] lg:h-24 bg-gradient-to-r from-blue-900 to-black header-modern flex flex-col sm:flex-row items-center justify-between px-3 sm:px-6 lg:px-12 py-3 sm:py-4 lg:py-0 relative overflow-hidden z-50"
       >
         <div className="header-overlay" />
         <svg
@@ -91,11 +91,13 @@ function Header() {
             <circle cx="1600" cy="48" r="40" fill="url(#headerGradient)" opacity="0.25" />
           </g>
         </svg>
-        <div className="flex items-center space-x-6 relative z-10">
+        
+        {/* Logo and University Info */}
+        <div className="flex items-center space-x-3 sm:space-x-4 lg:space-x-6 relative z-10 w-full sm:w-auto justify-center sm:justify-start">
           <motion.img
             src={logo}
             alt="Periyar University Logo"
-            className="w-16 h-16 rounded-full border-2 border-blue-300/50 shadow-[0_0_30px_rgba(59,130,246,0.7)] object-cover"
+            className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full border-2 border-blue-300/50 shadow-[0_0_30px_rgba(59,130,246,0.7)] object-cover flex-shrink-0"
             variants={logoVariants}
             initial="initial"
             animate="animate"
@@ -106,7 +108,7 @@ function Header() {
               initial={{ opacity: 0, x: -40 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: [0.76, 0, 0.24, 1] }}
-              className="text-xl lg:text-2xl font-inter font-extrabold text-white tracking-tight shadow-text"
+              className="text-base sm:text-lg md:text-xl lg:text-2xl font-inter font-extrabold text-white tracking-tight shadow-text"
             >
               Periyar University
             </motion.h1>
@@ -114,26 +116,32 @@ function Header() {
               initial={{ opacity: 0, x: -40 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.3, ease: [0.76, 0, 0.24, 1] }}
-              className="text-sm lg:text-base font-poppins font-medium text-blue-200 leading-tight"
+              className="hidden md:block text-xs md:text-sm lg:text-base font-poppins font-medium text-blue-200 leading-tight"
             >
-              NAAC 'A++' Grade | NIRF Rank 56
+              State University - NAAC 'A++' Grade - NIRF Rank 94
+              <br className="hidden xl:block" />
+              <span className="hidden xl:inline"> </span>
+              <span className="xl:hidden"><br /></span>
+              State Public University Rank 40 - SDG Institutions Rank Band: 11-50
             </motion.p>
             <motion.p
               initial={{ opacity: 0, x: -40 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4, ease: [0.76, 0, 0.24, 1] }}
-              className="text-sm lg:text-base font-poppins font-medium text-blue-200"
+              className="text-xs sm:text-sm lg:text-base font-poppins font-medium text-blue-200"
             >
               Salem-636011, Tamil Nadu
             </motion.p>
           </div>
         </div>
-        <div className="flex items-center space-x-5 relative z-10">
+        
+        {/* Right side - Portal Badge and Icon */}
+        <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-5 relative z-10 mt-2 sm:mt-0">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.5, ease: [0.76, 0, 0.24, 1] }}
-            className="relative text-base lg:text-lg font-semibold font-poppins text-white px-7 py-3 rounded-full bg-blue-800   transition-all duration-400 overflow-hidden group"
+            className="relative text-xs sm:text-sm md:text-base lg:text-lg font-semibold font-poppins text-white px-3 py-2 sm:px-5 sm:py-2.5 lg:px-7 lg:py-3 rounded-full bg-blue-800 transition-all duration-400 overflow-hidden group"
             whileTap={{ scale: 0.95 }}
           >
             <motion.div
@@ -142,14 +150,14 @@ function Header() {
               whileHover={{ x: 0 }}
               transition={{ duration: 0.4 }}
             />
-            <motion.div className="relative z-10 flex items-center space-x-2">
+            <motion.div className="relative z-10 flex items-center space-x-1 sm:space-x-2">
               <motion.div
                 whileHover={{ rotate: 15 }}
                 transition={{ duration: 0.3 }}
               >
-                <FaLeaf className="text-xl lg:text-2xl" />
+                <FaLeaf className="text-sm sm:text-lg lg:text-2xl" />
               </motion.div>
-              <span>Graduation Registration Portal</span>
+              <span className="whitespace-nowrap">Graduation Portal</span>
             </motion.div>
           </motion.div>
           <motion.div
@@ -157,9 +165,10 @@ function Header() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.6 }}
             whileHover={{ scale: 1.1, rotate: 5 }}
+            className="hidden sm:block"
           >
-            <div className="w-14 h-14 rounded-full bg-blue-800 flex items-center justify-center">
-              <FaUserGraduate className="text-2xl text-white" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full bg-blue-800 flex items-center justify-center">
+              <FaUserGraduate className="text-lg sm:text-xl lg:text-2xl text-white" />
             </div>
           </motion.div>
         </div>

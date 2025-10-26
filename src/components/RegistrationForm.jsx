@@ -177,7 +177,7 @@ export default function GraduationRegistrationForm() {
         }}
       />
       <Header />
-      <div className="min-h-screen bg-white relative overflow-hidden pt-28 pb-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-white relative overflow-hidden pt-24 sm:pt-28 md:pt-32 lg:pt-28 pb-12 px-4 sm:px-6 lg:px-8">
         <style>
           {`
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap');
@@ -193,9 +193,19 @@ export default function GraduationRegistrationForm() {
               background: rgba(255, 255, 255, 0.95);
               backdrop-filter: blur(12px);
             }
+            @media (max-width: 640px) {
+              .card-modern {
+                border-radius: 20px;
+              }
+            }
             .card-modern:hover {
               transform: translateY(-10px);
               box-shadow: 0 16px 60px rgba(59, 130, 246, 0.25);
+            }
+            @media (max-width: 640px) {
+              .card-modern:hover {
+                transform: translateY(-5px);
+              }
             }
             .card-glow::before {
               content: '';
@@ -240,7 +250,7 @@ export default function GraduationRegistrationForm() {
             .modal-content {
               background: rgba(255, 255, 255, 0.95);
               backdrop-filter: blur(12px);
-              border-radius: 24px;
+              border-radius: 16px;
               box-shadow: 0 12px 40px rgba(59, 130, 246, 0.3);
               border: 4px solid transparent;
               background: linear-gradient(white, white) padding-box, linear-gradient(45deg, #3B82F6, #60A5FA) border-box;
@@ -249,21 +259,36 @@ export default function GraduationRegistrationForm() {
               max-height: 80vh;
               overflow-y: auto;
               position: relative;
+              padding: 1.5rem;
+            }
+            @media (min-width: 640px) {
+              .modal-content {
+                border-radius: 24px;
+                padding: 2rem;
+              }
             }
             .modal-close {
               position: absolute;
-              top: 16px;
-              right: 16px;
+              top: 12px;
+              right: 12px;
               background: #EF4444;
               color: white;
               border-radius: 50%;
-              width: 36px;
-              height: 36px;
+              width: 32px;
+              height: 32px;
               display: flex;
               align-items: center;
               justify-content: center;
               cursor: pointer;
               transition: all 0.3s ease;
+            }
+            @media (min-width: 640px) {
+              .modal-close {
+                top: 16px;
+                right: 16px;
+                width: 36px;
+                height: 36px;
+              }
             }
             .modal-close:hover {
               background: #DC2626;
@@ -344,7 +369,7 @@ export default function GraduationRegistrationForm() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-5xl font-inter font-extrabold text-blue-900 text-center mb-12 tracking-tight shadow-text"
+          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-inter font-extrabold text-blue-900 text-center mb-6 sm:mb-8 lg:mb-12 tracking-tight shadow-text px-4"
         >
           Graduation Registration Form
         </motion.h1>
@@ -355,7 +380,7 @@ export default function GraduationRegistrationForm() {
           className="max-w-7xl mx-auto relative z-10"
         >
           <motion.div
-            className="card-modern card-glow card-border-blue p-10 relative"
+            className="card-modern card-glow card-border-blue p-4 sm:p-6 lg:p-10 relative"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
@@ -365,36 +390,36 @@ export default function GraduationRegistrationForm() {
               onClick={() => setShowGuidelines(true)}
               whileHover={{ scale: 1.1, boxShadow: '0 0 20px rgba(59,130,246,0.8)' }}
               whileTap={{ scale: 0.9 }}
-              className="absolute top-6 right-6 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="absolute top-3 right-3 sm:top-6 sm:right-6 bg-blue-600 text-white rounded-full p-2 sm:p-3 shadow-lg hover:shadow-xl transition-all duration-300 z-10"
             >
-              <FaInfoCircle className="text-xl" />
+              <FaInfoCircle className="text-lg sm:text-xl" />
             </motion.button>
             <motion.h2
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="text-3xl font-inter font-extrabold text-blue-900 mb-8 flex items-center gap-4"
+              className="text-xl sm:text-2xl lg:text-3xl font-inter font-extrabold text-blue-900 mb-6 sm:mb-8 flex items-center gap-2 sm:gap-4"
             >
-              <FaGraduationCap className="text-blue-600 text-3xl" />
+              <FaGraduationCap className="text-blue-600 text-2xl sm:text-3xl" />
               Registration Details
             </motion.h2>
-            <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-6 sm:space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.5 }}
                 >
-                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaUser className="text-blue-600 text-2xl" />
-                    Full Name (As in Degree Certificate)
+                  <label className="flex items-center gap-2 sm:gap-3 text-blue-800 font-semibold mb-2 text-base sm:text-lg font-poppins">
+                    <FaUser className="text-blue-600 text-lg sm:text-2xl flex-shrink-0" />
+                    <span>Full Name (As in Degree Certificate)</span>
                   </label>
                   <input
                     type="text"
                     name="full_name"
                     value={formData.full_name}
                     onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    className="w-full px-4 py-3 sm:px-6 sm:py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-base sm:text-lg placeholder-blue-400/60"
                     placeholder="Enter full name"
                     required
                   />
@@ -405,36 +430,36 @@ export default function GraduationRegistrationForm() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.6 }}
                 >
-                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaGraduationCap className="text-blue-600 text-2xl" />
-                    Date of Birth
+                  <label className="flex items-center gap-2 sm:gap-3 text-blue-800 font-semibold mb-2 text-base sm:text-lg font-poppins">
+                    <FaGraduationCap className="text-blue-600 text-lg sm:text-2xl flex-shrink-0" />
+                    <span>Date of Birth</span>
                   </label>
                   <input
                     type="date"
                     name="date_of_birth"
                     value={formData.date_of_birth}
                     onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
+                    className="w-full px-4 py-3 sm:px-6 sm:py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-base sm:text-lg"
                     required
                   />
                   {errors.date_of_birth && <p className="text-red-600 text-sm mt-1">{errors.date_of_birth}</p>}
                 </motion.div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.7 }}
                 >
-                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaVenusMars className="text-blue-600 text-2xl" />
-                    Gender
+                  <label className="flex items-center gap-2 sm:gap-3 text-blue-800 font-semibold mb-2 text-base sm:text-lg font-poppins">
+                    <FaVenusMars className="text-blue-600 text-lg sm:text-2xl flex-shrink-0" />
+                    <span>Gender</span>
                   </label>
                   <select
                     name="gender"
                     value={formData.gender}
                     onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
+                    className="w-full px-4 py-3 sm:px-6 sm:py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-base sm:text-lg"
                     required
                   >
                     <option value="">-- Select Gender --</option>
@@ -969,10 +994,6 @@ export default function GraduationRegistrationForm() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 3.2 }}
               >
-                <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                  <FaCheckCircle className="text-blue-600 text-2xl" />
-                  Declaration
-                </label>
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -988,18 +1009,17 @@ export default function GraduationRegistrationForm() {
                 </label>
                 {errors.declaration && <p className="text-red-600 text-sm mt-1">{errors.declaration}</p>}
               </motion.div>
+              <PayDemo />
               <motion.button
                 type="button"
                 onClick={handleSubmit}
                 whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(59,130,246,0.8)' }}
                 whileTap={{ scale: 0.97 }}
-                disabled={!isFormValid}
-                className={`w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-4 rounded-xl font-bold font-poppins text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 ${!isFormValid ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-3 sm:py-4 rounded-xl font-bold font-poppins text-base sm:text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3"
               >
-                <FaGraduationCap className="text-2xl" />
-                Submit Registration
+                <FaGraduationCap className="text-xl sm:text-2xl" />
+                <span>Submit Registration</span>
               </motion.button>
-              <PayDemo/>
             </div>
           </motion.div>
           <AnimatePresence>
@@ -1026,13 +1046,13 @@ export default function GraduationRegistrationForm() {
                   >
                     ✕
                   </motion.div>
-                  <h3 className="text-3xl font-inter font-extrabold text-blue-900 mb-6 flex items-center gap-4">
-                    <FaGraduationCap className="text-blue-600 text-3xl" />
-                    Guidelines for Graduation Registration
+                  <h3 className="text-2xl sm:text-3xl font-inter font-extrabold text-blue-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-4">
+                    <FaGraduationCap className="text-blue-600 text-2xl sm:text-3xl" />
+                    <span>Guidelines for Graduation Registration</span>
                   </h3>
-                  <div className="space-y-6 text-blue-800 font-poppins text-lg">
-                    <h4 className="text-xl font-semibold text-blue-800">Step-by-Step Form Filling Instructions:</h4>
-                    <ol className="list-decimal ml-6 space-y-4">
+                  <div className="space-y-4 sm:space-y-6 text-blue-800 font-poppins text-sm sm:text-base lg:text-lg">
+                    <h4 className="text-lg sm:text-xl font-semibold text-blue-800">Step-by-Step Form Filling Instructions:</h4>
+                    <ol className="list-decimal ml-4 sm:ml-6 space-y-2 sm:space-y-4">
                       <li>Enter your full name as it appears in the degree certificate.</li>
                       <li>Provide your date of birth and select your gender.</li>
                       <li>Enter the name of your father/husband/mother/wife, nationality, and religion.</li>

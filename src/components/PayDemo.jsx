@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { FaRupeeSign, FaSpinner } from "react-icons/fa";
 import { API_BASE } from "../api";
 
 export default function PayDemo() {
@@ -46,11 +48,37 @@ export default function PayDemo() {
   }
 
   return (
-    <div>
-      <button onClick={payNow} disabled={busy} style={{ padding: "10px 16px" }}>
-        {busy ? "Starting…" : "Pay ₹300.00"}
-      </button>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+    <div className="mt-6 sm:mt-8">
+      <motion.button
+        onClick={payNow}
+        disabled={busy}
+        whileHover={!busy ? { scale: 1.03, boxShadow: '0 0 30px rgba(34,197,94,0.8)' } : {}}
+        whileTap={!busy ? { scale: 0.97 } : {}}
+        className={`w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 sm:py-4 rounded-xl font-bold font-poppins text-base sm:text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 ${
+          busy ? 'opacity-70 cursor-not-allowed' : ''
+        }`}
+      >
+        {busy ? (
+          <>
+            <FaSpinner className="text-xl sm:text-2xl animate-spin" />
+            <span>Processing Payment...</span>
+          </>
+        ) : (
+          <>
+            <FaRupeeSign className="text-xl sm:text-2xl" />
+            <span>Pay ₹300.00</span>
+          </>
+        )}
+      </motion.button>
+      {error && (
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-red-600 font-poppins text-sm sm:text-base mt-3 p-3 bg-red-50 border border-red-200 rounded-lg"
+        >
+          ⚠️ {error}
+        </motion.p>
+      )}
     </div>
   );
 }
