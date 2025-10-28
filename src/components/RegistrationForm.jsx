@@ -3,6 +3,9 @@ import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPhone, FaEnvelope, FaGraduationCap, FaVenusMars, FaHome, FaBriefcase, FaUtensils, FaUser, FaInfoCircle, FaCheckCircle, FaCamera, FaIdCard, FaFileAlt, FaSignature } from 'react-icons/fa';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { API_BASE } from '../api';
 import Header from './Header';
 import PayDemo from './PayDemo';
@@ -14,118 +17,135 @@ const COMMUNITY_OPTIONS = ['OC', 'BC', 'SC', 'ST', 'MBC'];
 const DISTRICT_OPTIONS = ['Dharmapuri', 'Krishnagiri', 'Namakkal', 'Salem'];
 const COMPANION_OPTIONS = ['1 Veg', '1 Non veg', '2 Veg', '2 Non Veg', '1 Veg and 1 Non veg'];
 
-export default function GraduationRegistrationForm() {
-  const initialFormData = {
-    full_name: '',
-    date_of_birth: '',
-    gender: '',
-    guardian_name: '',
-    nationality: '',
-    religion: '',
-    email: '',
-    mobile_number: '',
-    place_of_birth: '',
-    community: '',
-    mother_tongue: '',
-    applicant_photo: null,
-    aadhar_number: '',
-    aadhar_copy: null,
-    residence_certificate: null,
-    degree_name: '',
-    university_name: '',
-    degree_pattern: '',
-    convocation_year: '',
-    degree_certificate: null,
-    is_registered_graduate: 0,
-    other_university_certificate: null,
-    occupation: '',
-    address: '',
-    signature: null,
-    declaration: false,
-    lunch_required: '',
-    companion_option: ''
-  };
+// Zod validation schema
+const formSchema = z.object({
+  full_name: z.string().min(1, 'Full name is required').trim(),
+  date_of_birth: z.string().min(1, 'Date of birth is required'),
+  gender: z.string().min(1, 'Gender is required'),
+  guardian_name: z.string().min(1, 'Guardian name is required').trim(),
+  nationality: z.string().min(1, 'Nationality is required').trim(),
+  religion: z.string().min(1, 'Religion is required').trim(),
+  email: z.string().email('Invalid email format').or(z.literal('')),
+  mobile_number: z.string().regex(/^\d{10}$/, 'Mobile number must be 10 digits'),
+  place_of_birth: z.string().min(1, 'Place of birth is required'),
+  community: z.string().min(1, 'Community is required'),
+  mother_tongue: z.string().min(1, 'Mother tongue is required').trim(),
+  applicant_photo: z.instanceof(FileList).refine((files) => files?.length > 0, 'Applicant photo is required'),
+  aadhar_number: z.string().regex(/^\d{12}$/, 'Aadhar number must be 12 digits'),
+  aadhar_copy: z.instanceof(FileList).refine((files) => files?.length > 0, 'Aadhar copy is required'),
+  residence_certificate: z.instanceof(FileList).refine((files) => files?.length > 0, 'Residence certificate is required'),
+  degree_name: z.string().min(1, 'Degree name is required').trim(),
+  university_name: z.string().min(1, 'University name is required').trim(),
+  degree_pattern: z.string().min(1, 'Degree pattern is required').trim(),
+  convocation_year: z.string().min(1, 'Convocation year is required').trim(),
+  degree_certificate: z.instanceof(FileList).refine((files) => files?.length > 0, 'Degree certificate is required'),
+  is_registered_graduate: z.number().int().min(0).max(1),
+  other_university_certificate: z.instanceof(FileList).optional(),
+  occupation: z.string().min(1, 'Occupation is required').trim(),
+  address: z.string().min(1, 'Address is required').trim(),
+  signature: z.instanceof(FileList).refine((files) => files?.length > 0, 'Signature is required'),
+  declaration: z.boolean().refine((val) => val === true, 'You must accept the declaration'),
+  lunch_required: z.string().min(1, 'Lunch preference is required'),
+  companion_option: z.string().min(1, 'Companion option is required'),
+});
 
-  const [formData, setFormData] = useState(initialFormData);
-  const [errors, setErrors] = useState({});
-  const [particles, setParticles] = useState([]);
+export default function GraduationRegistrationForm() {
   const [showGuidelines, setShowGuidelines] = useState(false);
   const formRef = useRef(null);
 
-  const isFormValid = Object.entries(formData).every(([key, val]) => {
-    if (['email', 'address', 'other_university_certificate'].includes(key)) return true;
-    if (key === 'is_registered_graduate') return [0, 1].includes(val);
-    if (key === 'declaration') return val === true;
-    if (['applicant_photo', 'aadhar_copy', 'residence_certificate', 'degree_certificate', 'signature'].includes(key)) return val instanceof File;
-    return String(val).trim();
+  // React Hook Form with Zod validation
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+    reset,
+  } = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      full_name: '',
+      date_of_birth: '',
+      gender: '',
+      guardian_name: '',
+      nationality: '',
+      religion: '',
+      email: '',
+      mobile_number: '',
+      place_of_birth: '',
+      community: '',
+      mother_tongue: '',
+      aadhar_number: '',
+      degree_name: '',
+      university_name: '',
+      degree_pattern: '',
+      convocation_year: '',
+      is_registered_graduate: 0,
+      occupation: '',
+      address: '',
+      declaration: false,
+      lunch_required: '',
+      companion_option: '',
+    },
   });
 
+  const isRegisteredGraduate = watch('is_registered_graduate');
+
+  // Debug: Watch form values
   useEffect(() => {
-    const generateParticles = () => {
-      const newParticles = Array.from({ length: 50 }, () => ({
-        id: Math.random(),
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        size: Math.random() * 12 + 6,
-        speedX: (Math.random() - 0.5) * 3,
-        speedY: (Math.random() - 0.5) * 3,
-        color: `hsl(${Math.random() * 60 + 200}, 70%, 80%)`,
-      }));
-      setParticles(newParticles);
-    };
+    const subscription = watch((value) => {
+      console.log('📝 Form values updated:', value);
+      window.debugFormData = value;
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
 
-    generateParticles();
-    const interval = setInterval(() => {
-      setParticles((prev) =>
-        prev.map((p) => {
-          let newX = p.x + p.speedX;
-          let newY = p.y + p.speedY;
-          if (newX < 0 || newX > window.innerWidth) p.speedX *= -1;
-          if (newY < 0 || newY > window.innerHeight) p.speedY *= -1;
-          return {
-            ...p,
-            x: newX,
-            y: newY,
-            size: p.size + (Math.random() - 0.5) * 0.3,
-          };
-        })
-      );
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleChange = (e) => {
-    const { name, value, type, files, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'file' ? files[0] : type === 'checkbox' ? checked : (name === 'is_registered_graduate' ? (value === 'Yes' ? 1 : 0) : value)
-    }));
-    if ((type !== 'file' && value.trim()) || type === 'file' || type === 'checkbox') {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const handleSubmit = async () => {
+  const onSubmit = async (data) => {
+    console.log('🚀 Form submitted with data:', data);
+    
     try {
-      const formDataToSend = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value instanceof File) {
-          formDataToSend.append(key, value);
-        } else {
-          formDataToSend.append(key, value);
+      const formData = new FormData();
+      
+      // Append text fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (value instanceof FileList) {
+          // Append file fields
+          if (value.length > 0) {
+            formData.append(key, value[0]);
+          }
+        } else if (value !== null && value !== undefined && value !== '') {
+          formData.append(key, value);
         }
       });
 
-      const response = await axios.post(`${API_BASE}/register`, formDataToSend, {
+      // Debug: Log what's being sent
+      console.log('📤 FormData being sent:');
+      for (let [key, value] of formData.entries()) {
+        console.log(key, ':', value);
+      }
+
+      const response = await axios.post(`${API_BASE}/register`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
       toast.success('Registration successful! ID: ' + response.data.id, { id: 'register-success' });
-      setFormData(initialFormData);
-      setErrors({});
+      reset(); // Reset form after successful submission
     } catch (err) {
-      console.error('Registration error:', err);
+      console.error('❌ Registration error:', err);
+      console.error('Error response:', err.response?.data);
       toast.error(err.response?.data?.error || 'Registration failed', { id: 'register-error' });
+    }
+  };
+
+  const onError = (errors) => {
+    console.log('❌ Form validation errors:', errors);
+    toast.error('Please fill in all required fields correctly', { id: 'validation-error' });
+    
+    // Scroll to first error
+    const firstErrorField = Object.keys(errors)[0];
+    const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+    if (errorElement) {
+      errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      errorElement.focus();
     }
   };
 
@@ -177,62 +197,31 @@ export default function GraduationRegistrationForm() {
         }}
       />
       <Header />
-      <div className="min-h-screen bg-white relative overflow-hidden pt-24 sm:pt-28 md:pt-32 lg:pt-28 pb-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-200 relative overflow-hidden pt-24 sm:pt-28 md:pt-32 lg:pt-28 pb-12 px-4 sm:px-6 lg:px-8">
         <style>
           {`
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap');
             .font-inter { font-family: 'Inter', sans-serif; }
             .font-poppins { font-family: 'Poppins', sans-serif; }
-            .shadow-text { text-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); }
+            .shadow-text { text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
             .card-modern {
               position: relative;
               overflow: hidden;
-              transition: all 0.4s ease;
-              box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);
-              border-radius: 32px;
-              background: rgba(255, 255, 255, 0.95);
-              backdrop-filter: blur(12px);
+              transition: all 0.3s ease;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+              border-radius: 16px;
+              background: #ffffff;
             }
             @media (max-width: 640px) {
               .card-modern {
-                border-radius: 20px;
+                border-radius: 12px;
               }
             }
             .card-modern:hover {
-              transform: translateY(-10px);
-              box-shadow: 0 16px 60px rgba(59, 130, 246, 0.25);
-            }
-            @media (max-width: 640px) {
-              .card-modern:hover {
-                transform: translateY(-5px);
-              }
-            }
-            .card-glow::before {
-              content: '';
-              position: absolute;
-              inset: -4px;
-              border-radius: 36px;
-              filter: blur(12px);
-              opacity: 0.25;
-              z-index: -1;
-              transition: opacity 0.4s ease;
-            }
-            .card-modern:hover .card-glow::before {
-              opacity: 0.5;
+              box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
             }
             .card-border-blue {
-              border: 4px solid transparent;
-              background: linear-gradient(white, white) padding-box, linear-gradient(45deg, #3B82F6, #60A5FA) border-box;
-            }
-            .card-overlay {
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              bottom: 0;
-              border-radius: 32px;
-              background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
-              pointer-events: none;
+              border: 2px solid #E5E7EB;
             }
             .modal-overlay {
               position: fixed;
@@ -240,20 +229,17 @@ export default function GraduationRegistrationForm() {
               left: 0;
               right: 0;
               bottom: 0;
-              background: rgba(0, 0, 0, 0.6);
-              backdrop-filter: blur(8px);
+              background: rgba(0, 0, 0, 0.5);
               display: flex;
               align-items: center;
               justify-content: center;
               z-index: 1000;
             }
             .modal-content {
-              background: rgba(255, 255, 255, 0.95);
-              backdrop-filter: blur(12px);
-              border-radius: 16px;
-              box-shadow: 0 12px 40px rgba(59, 130, 246, 0.3);
-              border: 4px solid transparent;
-              background: linear-gradient(white, white) padding-box, linear-gradient(45deg, #3B82F6, #60A5FA) border-box;
+              background: #ffffff;
+              border-radius: 12px;
+              box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+              border: 2px solid #E5E7EB;
               max-width: 600px;
               width: 90%;
               max-height: 80vh;
@@ -263,7 +249,7 @@ export default function GraduationRegistrationForm() {
             }
             @media (min-width: 640px) {
               .modal-content {
-                border-radius: 24px;
+                border-radius: 16px;
                 padding: 2rem;
               }
             }
@@ -280,7 +266,7 @@ export default function GraduationRegistrationForm() {
               align-items: center;
               justify-content: center;
               cursor: pointer;
-              transition: all 0.3s ease;
+              transition: all 0.2s ease;
             }
             @media (min-width: 640px) {
               .modal-close {
@@ -292,79 +278,9 @@ export default function GraduationRegistrationForm() {
             }
             .modal-close:hover {
               background: #DC2626;
-              transform: rotate(90deg);
             }
           `}
         </style>
-        <svg
-          className="absolute inset-0 w-full h-full pointer-events-none opacity-40"
-          viewBox="0 0 1920 1080"
-          preserveAspectRatio="none"
-        >
-          <defs>
-            <linearGradient id="modernGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style={{ stopColor: '#1E3A8A', stopOpacity: 0.7 }} />
-              <stop offset="50%" style={{ stopColor: '#3B82F6', stopOpacity: 0.6 }} />
-              <stop offset="100%" style={{ stopColor: '#60A5FA', stopOpacity: 0.5 }} />
-            </linearGradient>
-            <radialGradient id="radialGradient" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" style={{ stopColor: '#93C5FD', stopOpacity: 0.5 }} />
-              <stop offset="100%" style={{ stopColor: '#1E3A8A', stopOpacity: 0.2 }} />
-            </radialGradient>
-          </defs>
-          <g>
-            <rect x="0" y="0" width="1920" height="1080" fill="url(#modernGradient)" opacity="0.2" />
-            <circle cx="300" cy="200" r="250" fill="url(#radialGradient)" opacity="0.3" />
-            <circle cx="1600" cy="800" r="300" fill="url(#radialGradient)" opacity="0.25" />
-            <path
-              d="M0,600 C400,400 800,600 1200,400 C1600,200 2000,400 1920,600"
-              fill="none"
-              stroke="url(#modernGradient)"
-              strokeWidth="50"
-              opacity="0.35"
-            />
-            <rect x="900" y="300" width="500" height="250" rx="50" fill="url(#radialGradient)" opacity="0.2" transform="rotate(45 1150 425)" />
-            <path
-              d="M100,900 C500,700 900,900 1300,700 C1700,500 2100,700 1920,900"
-              fill="none"
-              stroke="url(#modernGradient)"
-              strokeWidth="40"
-              opacity="0.3"
-            />
-            <circle cx="1100" cy="150" r="150" fill="url(#radialGradient)" opacity="0.25" />
-            <path
-              d="M200,100 C600,300 1000,100 1400,300 C1800,500 2200,300 1920,100"
-              fill="none"
-              stroke="url(#modernGradient)"
-              strokeWidth="30"
-              opacity="0.3"
-            />
-          </g>
-        </svg>
-        <div className="absolute inset-0 pointer-events-none">
-          <AnimatePresence>
-            {particles.map((particle) => (
-              <motion.div
-                key={particle.id}
-                initial={{ opacity: 0.6, scale: 0 }}
-                animate={{
-                  x: particle.x,
-                  y: particle.y,
-                  scale: particle.size / 8,
-                  opacity: 0.7,
-                }}
-                transition={{ duration: 0.04, ease: 'linear' }}
-                className="absolute rounded-full blur-sm"
-                style={{
-                  width: particle.size,
-                  height: particle.size,
-                  background: particle.color,
-                  boxShadow: '0 0 25px rgba(59, 130, 246, 0.7)',
-                }}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
         <motion.h1
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -380,17 +296,16 @@ export default function GraduationRegistrationForm() {
           className="max-w-7xl mx-auto relative z-10"
         >
           <motion.div
-            className="card-modern card-glow card-border-blue p-4 sm:p-6 lg:p-10 relative"
+            className="card-modern card-border-blue p-4 sm:p-6 lg:p-10 relative"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <div className="card-overlay" />
             <motion.button
               onClick={() => setShowGuidelines(true)}
-              whileHover={{ scale: 1.1, boxShadow: '0 0 20px rgba(59,130,246,0.8)' }}
-              whileTap={{ scale: 0.9 }}
-              className="absolute top-3 right-3 sm:top-6 sm:right-6 bg-blue-600 text-white rounded-full p-2 sm:p-3 shadow-lg hover:shadow-xl transition-all duration-300 z-10"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="absolute top-3 right-3 sm:top-6 sm:right-6 bg-blue-600 text-white rounded-full p-2 sm:p-3 shadow-md hover:shadow-lg hover:bg-blue-700 transition-all duration-200 z-10"
             >
               <FaInfoCircle className="text-lg sm:text-xl" />
             </motion.button>
@@ -416,14 +331,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="full_name"
-                    value={formData.full_name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 sm:px-6 sm:py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-base sm:text-lg placeholder-blue-400/60"
+                    {...register('full_name')}
+                    className="w-full px-4 py-3 sm:px-6 sm:py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-base sm:text-lg placeholder-gray-400/60"
                     placeholder="Enter full name"
-                    required
                   />
-                  {errors.full_name && <p className="text-red-600 text-sm mt-1">{errors.full_name}</p>}
+                  {errors.full_name && <p className="text-red-600 text-sm mt-1">{errors.full_name.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -436,13 +348,10 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="date"
-                    name="date_of_birth"
-                    value={formData.date_of_birth}
-                    onChange={handleChange}
+                    {...register('date_of_birth')}
                     className="w-full px-4 py-3 sm:px-6 sm:py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-base sm:text-lg"
-                    required
                   />
-                  {errors.date_of_birth && <p className="text-red-600 text-sm mt-1">{errors.date_of_birth}</p>}
+                  {errors.date_of_birth && <p className="text-red-600 text-sm mt-1">{errors.date_of_birth.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -456,18 +365,15 @@ export default function GraduationRegistrationForm() {
                     <span>Gender</span>
                   </label>
                   <select
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleChange}
+                    {...register('gender')}
                     className="w-full px-4 py-3 sm:px-6 sm:py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-base sm:text-lg"
-                    required
                   >
                     <option value="">-- Select Gender --</option>
                     {GENDER_OPTIONS.map((option) => (
                       <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
-                  {errors.gender && <p className="text-red-600 text-sm mt-1">{errors.gender}</p>}
+                  {errors.gender && <p className="text-red-600 text-sm mt-1">{errors.gender.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -480,14 +386,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="guardian_name"
-                    value={formData.guardian_name}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('guardian_name')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter guardian name"
-                    required
                   />
-                  {errors.guardian_name && <p className="text-red-600 text-sm mt-1">{errors.guardian_name}</p>}
+                  {errors.guardian_name && <p className="text-red-600 text-sm mt-1">{errors.guardian_name.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -502,14 +405,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="nationality"
-                    value={formData.nationality}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('nationality')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter nationality"
-                    required
                   />
-                  {errors.nationality && <p className="text-red-600 text-sm mt-1">{errors.nationality}</p>}
+                  {errors.nationality && <p className="text-red-600 text-sm mt-1">{errors.nationality.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -522,14 +422,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="religion"
-                    value={formData.religion}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('religion')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter religion"
-                    required
                   />
-                  {errors.religion && <p className="text-red-600 text-sm mt-1">{errors.religion}</p>}
+                  {errors.religion && <p className="text-red-600 text-sm mt-1">{errors.religion.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -544,13 +441,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('email')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter unique email address"
                   />
-                  {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
+                  {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -563,16 +458,12 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="tel"
-                    name="mobile_number"
-                    value={formData.mobile_number}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('mobile_number')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter 10-digit mobile number"
-                    required
                     maxLength="10"
-                    pattern="\d{10}"
                   />
-                  {errors.mobile_number && <p className="text-red-600 text-sm mt-1">{errors.mobile_number}</p>}
+                  {errors.mobile_number && <p className="text-red-600 text-sm mt-1">{errors.mobile_number.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -586,18 +477,15 @@ export default function GraduationRegistrationForm() {
                     Place of Birth (District)
                   </label>
                   <select
-                    name="place_of_birth"
-                    value={formData.place_of_birth}
-                    onChange={handleChange}
+                    {...register('place_of_birth')}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                    required
                   >
                     <option value="">-- Select District --</option>
                     {DISTRICT_OPTIONS.map((option) => (
                       <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
-                  {errors.place_of_birth && <p className="text-red-600 text-sm mt-1">{errors.place_of_birth}</p>}
+                  {errors.place_of_birth && <p className="text-red-600 text-sm mt-1">{errors.place_of_birth.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -609,18 +497,15 @@ export default function GraduationRegistrationForm() {
                     Community
                   </label>
                   <select
-                    name="community"
-                    value={formData.community}
-                    onChange={handleChange}
+                    {...register('community')}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                    required
                   >
                     <option value="">-- Select Community --</option>
                     {COMMUNITY_OPTIONS.map((option) => (
                       <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
-                  {errors.community && <p className="text-red-600 text-sm mt-1">{errors.community}</p>}
+                  {errors.community && <p className="text-red-600 text-sm mt-1">{errors.community.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -635,14 +520,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="mother_tongue"
-                    value={formData.mother_tongue}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('mother_tongue')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter mother tongue"
-                    required
                   />
-                  {errors.mother_tongue && <p className="text-red-600 text-sm mt-1">{errors.mother_tongue}</p>}
+                  {errors.mother_tongue && <p className="text-red-600 text-sm mt-1">{errors.mother_tongue.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -655,13 +537,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="file"
-                    name="applicant_photo"
+                    {...register('applicant_photo')}
                     accept="image/*"
-                    onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                    required
                   />
-                  {errors.applicant_photo && <p className="text-red-600 text-sm mt-1">{errors.applicant_photo}</p>}
+                  {errors.applicant_photo && <p className="text-red-600 text-sm mt-1">{errors.applicant_photo.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -676,16 +556,12 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="aadhar_number"
-                    value={formData.aadhar_number}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('aadhar_number')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter 12-digit Aadhar number"
-                    required
                     maxLength="12"
-                    pattern="\d{12}"
                   />
-                  {errors.aadhar_number && <p className="text-red-600 text-sm mt-1">{errors.aadhar_number}</p>}
+                  {errors.aadhar_number && <p className="text-red-600 text-sm mt-1">{errors.aadhar_number.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -698,13 +574,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="file"
-                    name="aadhar_copy"
+                    {...register('aadhar_copy')}
                     accept="image/*,application/pdf"
-                    onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                    required
                   />
-                  {errors.aadhar_copy && <p className="text-red-600 text-sm mt-1">{errors.aadhar_copy}</p>}
+                  {errors.aadhar_copy && <p className="text-red-600 text-sm mt-1">{errors.aadhar_copy.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -719,13 +593,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="file"
-                    name="residence_certificate"
+                    {...register('residence_certificate')}
                     accept="image/*,application/pdf"
-                    onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                    required
                   />
-                  {errors.residence_certificate && <p className="text-red-600 text-sm mt-1">{errors.residence_certificate}</p>}
+                  {errors.residence_certificate && <p className="text-red-600 text-sm mt-1">{errors.residence_certificate.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -738,14 +610,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="degree_name"
-                    value={formData.degree_name}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('degree_name')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter degree name(s)"
-                    required
                   />
-                  {errors.degree_name && <p className="text-red-600 text-sm mt-1">{errors.degree_name}</p>}
+                  {errors.degree_name && <p className="text-red-600 text-sm mt-1">{errors.degree_name.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -760,14 +629,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="university_name"
-                    value={formData.university_name}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('university_name')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter university name"
-                    required
                   />
-                  {errors.university_name && <p className="text-red-600 text-sm mt-1">{errors.university_name}</p>}
+                  {errors.university_name && <p className="text-red-600 text-sm mt-1">{errors.university_name.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -780,14 +646,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="degree_pattern"
-                    value={formData.degree_pattern}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('degree_pattern')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter degree pattern"
-                    required
                   />
-                  {errors.degree_pattern && <p className="text-red-600 text-sm mt-1">{errors.degree_pattern}</p>}
+                  {errors.degree_pattern && <p className="text-red-600 text-sm mt-1">{errors.degree_pattern.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -802,14 +665,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="convocation_year"
-                    value={formData.convocation_year}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('convocation_year')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter convocation year"
-                    required
                   />
-                  {errors.convocation_year && <p className="text-red-600 text-sm mt-1">{errors.convocation_year}</p>}
+                  {errors.convocation_year && <p className="text-red-600 text-sm mt-1">{errors.convocation_year.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -822,13 +682,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="file"
-                    name="degree_certificate"
+                    {...register('degree_certificate')}
                     accept="image/*,application/pdf"
-                    onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                    required
                   />
-                  {errors.degree_certificate && <p className="text-red-600 text-sm mt-1">{errors.degree_certificate}</p>}
+                  {errors.degree_certificate && <p className="text-red-600 text-sm mt-1">{errors.degree_certificate.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -846,19 +704,17 @@ export default function GraduationRegistrationForm() {
                       <label key={option} className="flex items-center gap-2">
                         <input
                           type="radio"
-                          name="is_registered_graduate"
-                          value={option}
-                          checked={formData.is_registered_graduate === (option === 'Yes' ? 1 : 0)}
-                          onChange={handleChange}
+                          {...register('is_registered_graduate')}
+                          value={option === 'Yes' ? 1 : 0}
                           className="h-5 w-5 text-blue-600 border-blue-200 focus:ring-blue-400"
                         />
                         <span className="font-poppins text-blue-900">{option}</span>
                       </label>
                     ))}
                   </div>
-                  {errors.is_registered_graduate && <p className="text-red-600 text-sm mt-1">{errors.is_registered_graduate}</p>}
+                  {errors.is_registered_graduate && <p className="text-red-600 text-sm mt-1">{errors.is_registered_graduate.message}</p>}
                 </motion.div>
-                {formData.is_registered_graduate === 1 && (
+                {isRegisteredGraduate === 1 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -870,13 +726,11 @@ export default function GraduationRegistrationForm() {
                     </label>
                     <input
                       type="file"
-                      name="other_university_certificate"
+                      {...register('other_university_certificate')}
                       accept="image/*,application/pdf"
-                      onChange={handleChange}
                       className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                      required
                     />
-                    {errors.other_university_certificate && <p className="text-red-600 text-sm mt-1">{errors.other_university_certificate}</p>}
+                    {errors.other_university_certificate && <p className="text-red-600 text-sm mt-1">{errors.other_university_certificate.message}</p>}
                   </motion.div>
                 )}
               </div>
@@ -892,14 +746,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="text"
-                    name="occupation"
-                    value={formData.occupation}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('occupation')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter current occupation"
-                    required
                   />
-                  {errors.occupation && <p className="text-red-600 text-sm mt-1">{errors.occupation}</p>}
+                  {errors.occupation && <p className="text-red-600 text-sm mt-1">{errors.occupation.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -911,15 +762,12 @@ export default function GraduationRegistrationForm() {
                     Address for Communication
                   </label>
                   <textarea
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-blue-400/60"
+                    {...register('address')}
+                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
                     placeholder="Enter address"
                     rows="4"
-                    required
                   />
-                  {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address}</p>}
+                  {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address.message}</p>}
                 </motion.div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -934,13 +782,11 @@ export default function GraduationRegistrationForm() {
                   </label>
                   <input
                     type="file"
-                    name="signature"
+                    {...register('signature')}
                     accept="image/*"
-                    onChange={handleChange}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                    required
                   />
-                  {errors.signature && <p className="text-red-600 text-sm mt-1">{errors.signature}</p>}
+                  {errors.signature && <p className="text-red-600 text-sm mt-1">{errors.signature.message}</p>}
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -952,18 +798,15 @@ export default function GraduationRegistrationForm() {
                     Lunch Preference
                   </label>
                   <select
-                    name="lunch_required"
-                    value={formData.lunch_required}
-                    onChange={handleChange}
+                    {...register('lunch_required')}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                    required
                   >
                     <option value="">-- Select Lunch Preference --</option>
                     {LUNCH_OPTIONS.map((option) => (
                       <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
-                  {errors.lunch_required && <p className="text-red-600 text-sm mt-1">{errors.lunch_required}</p>}
+                  {errors.lunch_required && <p className="text-red-600 text-sm mt-1">{errors.lunch_required.message}</p>}
                 </motion.div>
               </div>
               <motion.div
@@ -976,18 +819,15 @@ export default function GraduationRegistrationForm() {
                   Companion Option
                 </label>
                 <select
-                  name="companion_option"
-                  value={formData.companion_option}
-                  onChange={handleChange}
+                  {...register('companion_option')}
                   className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                  required
                 >
                   <option value="">-- Select Companion Option --</option>
                   {COMPANION_OPTIONS.map((option) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
-                {errors.companion_option && <p className="text-red-600 text-sm mt-1">{errors.companion_option}</p>}
+                {errors.companion_option && <p className="text-red-600 text-sm mt-1">{errors.companion_option.message}</p>}
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -997,28 +837,28 @@ export default function GraduationRegistrationForm() {
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    name="declaration"
-                    checked={formData.declaration}
-                    onChange={handleChange}
+                    {...register('declaration')}
                     className="h-5 w-5 text-blue-600 border-blue-200 focus:ring-blue-400"
-                    required
                   />
                   <span className="font-poppins text-blue-900 text-lg">
                     I declare the above information is true to the best of my knowledge and if it is found to be untrue, my claim may be considered invalid.
                   </span>
                 </label>
-                {errors.declaration && <p className="text-red-600 text-sm mt-1">{errors.declaration}</p>}
+                {errors.declaration && <p className="text-red-600 text-sm mt-1">{errors.declaration.message}</p>}
               </motion.div>
               <PayDemo />
               <motion.button
-                type="button"
-                onClick={handleSubmit}
-                whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(59,130,246,0.8)' }}
-                whileTap={{ scale: 0.97 }}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-3 sm:py-4 rounded-xl font-bold font-poppins text-base sm:text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3"
+                type="submit"
+                onClick={handleSubmit(onSubmit, onError)}
+                disabled={isSubmitting}
+                whileHover={!isSubmitting ? { scale: 1.02 } : {}}
+                whileTap={!isSubmitting ? { scale: 0.98 } : {}}
+                className={`w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-3 sm:py-4 rounded-xl font-bold font-poppins text-base sm:text-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 sm:gap-3 ${
+                  isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
               >
                 <FaGraduationCap className="text-xl sm:text-2xl" />
-                <span>Submit Registration</span>
+                <span>{isSubmitting ? 'Submitting...' : 'Submit Registration'}</span>
               </motion.button>
             </div>
           </motion.div>
@@ -1029,20 +869,20 @@ export default function GraduationRegistrationForm() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.2 }}
               >
                 <motion.div
                   className="modal-content p-8 relative"
-                  initial={{ scale: 0.8, opacity: 0 }}
+                  initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  transition={{ duration: 0.4, type: 'spring', stiffness: 100 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <motion.div
                     className="modal-close"
                     onClick={() => setShowGuidelines(false)}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     ✕
                   </motion.div>
