@@ -9,9 +9,9 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<GraduationRegistrationForm />} />
-  <Route path="/success" element={<Success />} />
-  <Route path="/cancel" element={<Cancel />} />
-  <Route path="/payment/callback" element={<PaymentCallback />} />
+        <Route path="/success" element={<Success />} />
+        <Route path="/cancel" element={<Cancel />} />
+        <Route path="/payment/callback" element={<PaymentCallback />} />
       </Routes>
     </BrowserRouter>
   )

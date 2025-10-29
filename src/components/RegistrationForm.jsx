@@ -287,7 +287,7 @@ export default function GraduationRegistrationForm() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-inter font-extrabold text-blue-900 text-center mb-6 sm:mb-8 lg:mb-12 tracking-tight shadow-text px-4"
         >
-          Graduation Registration Form
+          Graduate Registration Form
         </motion.h1>
         <motion.div
           initial={{ opacity: 0, y: 50 }}
