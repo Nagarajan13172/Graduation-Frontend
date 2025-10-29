@@ -6,7 +6,8 @@ import { FaPhone, FaEnvelope, FaGraduationCap, FaVenusMars, FaHome, FaBriefcase,
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { API_BASE } from '../api';
+import { API_BASE, RU } from '../api';
+import { useSearchParams } from 'react-router';
 import Header from './Header';
 import PayDemo from './PayDemo';
 
@@ -39,8 +40,26 @@ const formSchema = z.object({
   degree_pattern: z.string().min(1, 'Degree pattern is required').trim(),
   convocation_year: z.string().min(1, 'Convocation year is required').trim(),
   degree_certificate: z.instanceof(FileList).refine((files) => files?.length > 0, 'Degree certificate is required'),
-  is_registered_graduate: z.number().int().min(0).max(1),
-  other_university_certificate: z.instanceof(FileList).optional(),
+  is_registered_graduate: z.preprocess((val) => {
+    if (typeof val === 'string') return parseInt(val, 10);
+    if (typeof val === 'number') return val;
+    return undefined;
+  }, z.number().int().min(0).max(1)),
+  other_university_certificate: z.union([
+    z.instanceof(FileList),
+    z.undefined()
+  ]).superRefine((val, ctx) => {
+    const formData = ctx.parent;
+    const isRegisteredGraduate = formData && 
+      (formData.is_registered_graduate === 1 || formData.is_registered_graduate === '1');
+    
+    if (isRegisteredGraduate && (!val || val.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Other university certificate is required when registered with another university"
+      });
+    }
+  }),
   occupation: z.string().min(1, 'Occupation is required').trim(),
   address: z.string().min(1, 'Address is required').trim(),
   signature: z.instanceof(FileList).refine((files) => files?.length > 0, 'Signature is required'),
@@ -51,7 +70,10 @@ const formSchema = z.object({
 
 export default function GraduationRegistrationForm() {
   const [showGuidelines, setShowGuidelines] = useState(false);
+  const [studentData, setStudentData] = useState(null);
   const formRef = useRef(null);
+  const [searchParams] = useSearchParams();
+  const orderId = searchParams.get('orderid');
 
   // React Hook Form with Zod validation
   const {
@@ -79,7 +101,7 @@ export default function GraduationRegistrationForm() {
       university_name: '',
       degree_pattern: '',
       convocation_year: '',
-      is_registered_graduate: 0,
+      is_registered_graduate: '0',
       occupation: '',
       address: '',
       declaration: false,
@@ -89,6 +111,60 @@ export default function GraduationRegistrationForm() {
   });
 
   const isRegisteredGraduate = watch('is_registered_graduate');
+
+  // Fetch student data when orderId is present
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      if (!orderId) return;
+      
+      try {
+        const response = await axios.get(`${RU}/api/payment/student/${orderId}`);
+        if (response.data.success) {
+          setStudentData(response.data.data);
+          
+          // Pre-fill the form with the fetched data
+          const data = response.data.data;
+          reset({
+            full_name: data.full_name,
+            date_of_birth: data.date_of_birth,
+            gender: data.gender,
+            guardian_name: data.guardian_name,
+            nationality: data.nationality,
+            religion: data.religion,
+            email: data.email,
+            mobile_number: data.mobile_number,
+            place_of_birth: data.place_of_birth,
+            community: data.community,
+            mother_tongue: data.mother_tongue,
+            aadhar_number: data.aadhar_number,
+            degree_name: data.degree_name,
+            university_name: data.university_name,
+            degree_pattern: data.degree_pattern,
+            convocation_year: data.convocation_year,
+            is_registered_graduate: String(data.is_registered_graduate),
+            occupation: data.occupation,
+            address: data.address,
+            lunch_required: data.lunch_required,
+            companion_option: data.companion_option,
+            declaration: Boolean(data.declaration)
+          });
+
+          // Show payment status toast
+          if (data.payment_status === 'failed') {
+            toast.error(
+              `Payment failed: ${data.payment_error_desc || 'Unknown error'}. Please try again.`, 
+              { duration: 5000 }
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching student data:', error);
+        toast.error('Failed to load previous registration data');
+      }
+    };
+
+    fetchStudentData();
+  }, [orderId, reset]);
 
   // Debug: Watch form values
   useEffect(() => {
@@ -123,16 +199,53 @@ export default function GraduationRegistrationForm() {
         console.log(key, ':', value);
       }
 
-      const response = await axios.post(`${API_BASE}/register`, formData, {
+      // First save the registration data
+      const registerResponse = await axios.post(`${API_BASE}/register`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      toast.success('Registration successful! ID: ' + response.data.id, { id: 'register-success' });
-      reset(); // Reset form after successful submission
+      const registrationId = registerResponse.data.id;
+      
+      // Use existing orderid if available (from failed payment)
+      const orderid = studentData?.orderid || orderId || ((typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID().replace(/-/g, '').toUpperCase()
+        : 'PU' + Math.random().toString(36).slice(2, 12).toUpperCase());
+      
+      const paymentResponse = await fetch(`${API_BASE}/billdesk/orders`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          orderid,
+          amount: "300.00",
+          currency: "356", // INR
+          ru: `${RU}` + "/api/payment/callback",
+          itemcode: "DIRECT",
+          additional_info: { 
+            purpose: "Application Fee",
+            registrationId: registrationId // Pass the registration ID to link payment
+          }
+        })
+      });
+
+      const paymentData = await paymentResponse.json();
+      if (!paymentResponse.ok) throw new Error(paymentData?.error || "Payment initiation failed");
+
+      const bdorderid = paymentData.bdorderid || paymentData.orderid || paymentData?.data?.bdorderid;
+      const rdataFromLinksArray = Array.isArray(paymentData?.links)
+        ? (paymentData.links.find(l => l?.parameters?.rdata)?.parameters?.rdata)
+        : undefined;
+      const rdata = paymentData?.rdata || rdataFromLinksArray;
+
+      if (!bdorderid || !rdata) throw new Error("Missing bdorderid/rdata in response");
+
+      // Redirect to payment
+      const params = new URLSearchParams({ bdorderid, rdata });
+      window.location.href = `${API_BASE}/billdesk/launch?${params.toString()}`;
+      
     } catch (err) {
-      console.error('❌ Registration error:', err);
+      console.error('❌ Registration/Payment error:', err);
       console.error('Error response:', err.response?.data);
-      toast.error(err.response?.data?.error || 'Registration failed', { id: 'register-error' });
+      toast.error(err.response?.data?.error || 'Registration/Payment process failed', { id: 'register-error' });
     }
   };
 
@@ -151,6 +264,25 @@ export default function GraduationRegistrationForm() {
 
   return (
     <div>
+      {studentData && studentData.payment_status === 'failed' && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <FaInfoCircle className="h-5 w-5 text-yellow-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                Your previous payment was unsuccessful. You can retry the payment with your existing registration information.
+                {studentData.payment_error_desc && (
+                  <span className="block mt-1">
+                    Error: {studentData.payment_error_desc}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <Toaster
         position="top-right"
         toastOptions={{
@@ -705,7 +837,7 @@ export default function GraduationRegistrationForm() {
                         <input
                           type="radio"
                           {...register('is_registered_graduate')}
-                          value={option === 'Yes' ? 1 : 0}
+                          value={option === 'Yes' ? '1' : '0'}
                           className="h-5 w-5 text-blue-600 border-blue-200 focus:ring-blue-400"
                         />
                         <span className="font-poppins text-blue-900">{option}</span>
@@ -714,7 +846,7 @@ export default function GraduationRegistrationForm() {
                   </div>
                   {errors.is_registered_graduate && <p className="text-red-600 text-sm mt-1">{errors.is_registered_graduate.message}</p>}
                 </motion.div>
-                {isRegisteredGraduate === 1 && (
+                {(isRegisteredGraduate === 1 || isRegisteredGraduate === '1') && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -858,7 +990,7 @@ export default function GraduationRegistrationForm() {
                 }`}
               >
                 <FaGraduationCap className="text-xl sm:text-2xl" />
-                <span>{isSubmitting ? 'Submitting...' : 'Submit Registration'}</span>
+                <span>{isSubmitting ? 'Processing...' : 'Pay and Proceed'}</span>
               </motion.button>
             </div>
           </motion.div>

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { FaRupeeSign, FaSpinner } from "react-icons/fa";
-import { API_BASE } from "../api";
+import { API_BASE, RU } from "../api";
 
 // Adjust to your env (e.g., import from config)
 // export const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:4000";
@@ -24,7 +24,7 @@ export default function PayDemo() {
           orderid,
           amount: "300.00",
           currency: "356", // INR (numeric ISO 4217 for BillDesk V2)
-          ru: window.location.origin + "/payment/result",
+          ru: `${RU}` + "/api/payment/callback",
           itemcode: "DIRECT",
           additional_info: { purpose: "Application Fee" }
         })
@@ -56,7 +56,7 @@ export default function PayDemo() {
 
   return (
     <div className="mt-6 sm:mt-8">
-      <motion.button
+      {/* <motion.button
         onClick={payNow}
         disabled={busy}
         whileHover={!busy ? { scale: 1.03, boxShadow: '0 0 30px rgba(34,197,94,0.8)' } : {}}
@@ -76,7 +76,7 @@ export default function PayDemo() {
             <span>Pay ₹300.00</span>
           </>
         )}
-      </motion.button>
+      </motion.button> */}
       {error && (
         <motion.p
           initial={{ opacity: 0, y: -10 }}
