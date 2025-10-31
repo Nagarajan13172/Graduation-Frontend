@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { FaLeaf, FaUserGraduate } from 'react-icons/fa';
-import logo from '../../public/logo.png';
+import logo from '../assets/logo.png';
 
 function Header() {
   const logoVariants = {
@@ -98,7 +98,6 @@ function Header() {
             src={logo}
             alt="Periyar University Logo"
             className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full border-2 border-blue-300/50 shadow-[0_0_30px_rgba(59,130,246,0.7)] object-cover flex-shrink-0"
-            variants={logoVariants}
             initial="initial"
             animate="animate"
             whileHover="hover"
