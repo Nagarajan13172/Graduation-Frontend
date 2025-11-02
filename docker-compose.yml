@@ -1,6 +1,6 @@
 services:
   graduate-frontend:
-    image: ghcr.io/succeedex-org/oauth:stag
+    image: graduate-frontend
     container_name: graduate-frontend
     restart: always
     hostname: oauth
