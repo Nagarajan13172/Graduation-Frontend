@@ -216,7 +216,7 @@ export default function GraduationRegistrationForm() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           orderid,
-          amount: "1.00",
+          amount: "50.00",
           currency: "356", // INR
           ru: `${RU}` + "/api/payment/callback",
           itemcode: "DIRECT",
@@ -569,13 +569,13 @@ export default function GraduationRegistrationForm() {
                 >
                   <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
                     <FaEnvelope className="text-blue-600 text-2xl" />
-                    Email (Optional, must be unique)
+                    Email (Optional)
                   </label>
                   <input
                     type="email"
                     {...register('email')}
                     className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg placeholder-gray-400/60"
-                    placeholder="Enter unique email address"
+                    placeholder="Enter email address"
                   />
                   {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>}
                 </motion.div>
