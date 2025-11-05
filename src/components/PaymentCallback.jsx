@@ -30,7 +30,7 @@ export default function PaymentCallback() {
 
         if (res.data && res.data.success && (res.data.status === 'success' || res.data.auth_status === '0300')) {
           setStatusMsg('Payment verified successfully. Redirecting...');
-          setTimeout(() => navigate('/success'), 1200);
+          setTimeout(() => navigate(`/success?orderid=${orderid}`), 1200);
         } else {
           setStatusMsg('Payment failed or pending. Redirecting to cancellation page...');
           setTimeout(() => navigate('/cancel'), 1200);

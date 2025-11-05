@@ -22,7 +22,7 @@ export default function PayDemo() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           orderid,
-          amount: "50.00",
+          amount: "1.00",
           currency: "356", // INR (numeric ISO 4217 for BillDesk V2)
           ru: `${RU}` + "/api/payment/callback",
           itemcode: "DIRECT",

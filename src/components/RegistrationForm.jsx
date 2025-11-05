@@ -216,7 +216,7 @@ export default function GraduationRegistrationForm() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           orderid,
-          amount: "50.00",
+          amount: "1.00",
           currency: "356", // INR
           ru: `${RU}` + "/api/payment/callback",
           itemcode: "DIRECT",
