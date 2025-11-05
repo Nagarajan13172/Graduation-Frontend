@@ -50,9 +50,9 @@ const formSchema = z.object({
     z.undefined()
   ]).superRefine((val, ctx) => {
     const formData = ctx.parent;
-    const isRegisteredGraduate = formData && 
+    const isRegisteredGraduate = formData &&
       (formData.is_registered_graduate === 1 || formData.is_registered_graduate === '1');
-    
+
     if (isRegisteredGraduate && (!val || val.length === 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -116,12 +116,12 @@ export default function GraduationRegistrationForm() {
   useEffect(() => {
     const fetchStudentData = async () => {
       if (!orderId) return;
-      
+
       try {
         const response = await axios.get(`${RU}/api/payment/student/${orderId}`);
         if (response.data.success) {
           setStudentData(response.data.data);
-          
+
           // Pre-fill the form with the fetched data
           const data = response.data.data;
           reset({
@@ -152,7 +152,7 @@ export default function GraduationRegistrationForm() {
           // Show payment status toast
           if (data.payment_status === 'failed') {
             toast.error(
-              `Payment failed: ${data.payment_error_desc || 'Unknown error'}. Please try again.`, 
+              `Payment failed: ${data.payment_error_desc || 'Unknown error'}. Please try again.`,
               { duration: 5000 }
             );
           }
@@ -177,10 +177,10 @@ export default function GraduationRegistrationForm() {
 
   const onSubmit = async (data) => {
     console.log('🚀 Form submitted with data:', data);
-    
+
     try {
       const formData = new FormData();
-      
+
       // Append text fields
       Object.entries(data).forEach(([key, value]) => {
         if (value instanceof FileList) {
@@ -203,24 +203,24 @@ export default function GraduationRegistrationForm() {
       const registerResponse = await axios.post(`${API_BASE}/register`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       const registrationId = registerResponse.data.id;
-      
+
       // Use existing orderid if available (from failed payment)
       const orderid = studentData?.orderid || orderId || ((typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
         ? crypto.randomUUID().replace(/-/g, '').toUpperCase()
         : 'PU' + Math.random().toString(36).slice(2, 12).toUpperCase());
-      
+
       const paymentResponse = await fetch(`${API_BASE}/billdesk/orders`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           orderid,
-          amount: "300.00",
+          amount: "50.00",
           currency: "356", // INR
           ru: `${RU}` + "/api/payment/callback",
           itemcode: "DIRECT",
-          additional_info: { 
+          additional_info: {
             purpose: "Application Fee",
             registrationId: registrationId // Pass the registration ID to link payment
           }
@@ -241,7 +241,7 @@ export default function GraduationRegistrationForm() {
       // Redirect to payment
       const params = new URLSearchParams({ bdorderid, rdata });
       window.location.href = `${API_BASE}/billdesk/launch?${params.toString()}`;
-      
+
     } catch (err) {
       console.error('❌ Registration/Payment error:', err);
       console.error('Error response:', err.response?.data);
@@ -252,7 +252,7 @@ export default function GraduationRegistrationForm() {
   const onError = (errors) => {
     console.log('❌ Form validation errors:', errors);
     toast.error('Please fill in all required fields correctly', { id: 'validation-error' });
-    
+
     // Scroll to first error
     const firstErrorField = Object.keys(errors)[0];
     const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
@@ -985,9 +985,8 @@ export default function GraduationRegistrationForm() {
                 disabled={isSubmitting}
                 whileHover={!isSubmitting ? { scale: 1.02 } : {}}
                 whileTap={!isSubmitting ? { scale: 0.98 } : {}}
-                className={`w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-3 sm:py-4 rounded-xl font-bold font-poppins text-base sm:text-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 sm:gap-3 ${
-                  isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
+                className={`w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white py-3 sm:py-4 rounded-xl font-bold font-poppins text-base sm:text-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 sm:gap-3 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
               >
                 <FaGraduationCap className="text-xl sm:text-2xl" />
                 <span>{isSubmitting ? 'Processing...' : 'Pay and Proceed'}</span>

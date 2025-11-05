@@ -22,7 +22,7 @@ export default function PayDemo() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           orderid,
-          amount: "300.00",
+          amount: "50.00",
           currency: "356", // INR (numeric ISO 4217 for BillDesk V2)
           ru: `${RU}` + "/api/payment/callback",
           itemcode: "DIRECT",
@@ -73,7 +73,7 @@ export default function PayDemo() {
         ) : (
           <>
             <FaRupeeSign className="text-xl sm:text-2xl" />
-            <span>Pay ₹300.00</span>
+            <span>Pay 50.00</span>
           </>
         )}
       </motion.button> */}

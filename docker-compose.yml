@@ -3,7 +3,7 @@ services:
     image: graduate-frontend
     container_name: graduate-frontend
     restart: always
-    hostname: oauth
+    hostname: graduate
     networks:
       default:
     labels:
@@ -14,7 +14,7 @@ services:
       - traefik.http.routers.graduate-frontend.tls.certresolver=myresolver
 
       # ✅ Combine middlewares
-      - traefik.http.routers.graduate-frontend.middlewares=ratelimit,oauth-spa-fallback
+      - traefik.http.routers.graduate-frontend.middlewares=ratelimit,graduate-frontend-spa-fallback
 
       # === Rate Limit Middleware ===
       - traefik.http.middlewares.ratelimit.ratelimit.average=30
@@ -23,14 +23,14 @@ services:
       - traefik.http.middlewares.ratelimit.ratelimit.sourceCriterion.ipStrategy.depth=1
 
       # ✅ Correct middleware name scoped to this container
-      - traefik.http.middlewares.oauth-spa-fallback.errors.status=404
-      - traefik.http.middlewares.oauth-spa-fallback.errors.service=graduate-frontend
-      - traefik.http.middlewares.oauth-spa-fallback.errors.query=/index.html
+      - traefik.http.middlewares.graduate-frontend-spa-fallback.errors.status=404
+      - traefik.http.middlewares.graduate-frontend-spa-fallback.errors.service=graduate-frontend
+      - traefik.http.middlewares.graduate-frontend-spa-fallback.errors.query=/index.html
 
       - traefik.http.services.graduate-frontend.loadbalancer.server.port=80
 
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/"]
+      test: [ "CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/" ]
       interval: 30s
       timeout: 5s
       retries: 3
