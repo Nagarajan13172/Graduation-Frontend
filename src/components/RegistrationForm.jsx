@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaPhone, FaEnvelope, FaGraduationCap, FaVenusMars, FaHome, FaBriefcase, FaUtensils, FaUser, FaInfoCircle, FaCheckCircle, FaCamera, FaIdCard, FaFileAlt, FaSignature } from 'react-icons/fa';
+import { FaPhone, FaEnvelope, FaGraduationCap, FaVenusMars, FaHome, FaBriefcase, FaUser, FaInfoCircle, FaCheckCircle, FaCamera, FaIdCard, FaFileAlt, FaSignature } from 'react-icons/fa';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,10 +13,8 @@ import PayDemo from './PayDemo';
 
 const DEGREE_OPTIONS = ['UG', 'PG'];
 const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
-const LUNCH_OPTIONS = ['VEG', 'NON-VEG'];
 const COMMUNITY_OPTIONS = ['OC', 'BC', 'SC', 'ST', 'MBC'];
 const DISTRICT_OPTIONS = ['Dharmapuri', 'Krishnagiri', 'Namakkal', 'Salem'];
-const COMPANION_OPTIONS = ['1 Veg', '1 Non veg', '2 Veg', '2 Non Veg', '1 Veg and 1 Non veg'];
 
 // Zod validation schema
 const formSchema = z.object({
@@ -64,8 +62,6 @@ const formSchema = z.object({
   address: z.string().min(1, 'Address is required').trim(),
   signature: z.instanceof(FileList).refine((files) => files?.length > 0, 'Signature is required'),
   declaration: z.boolean().refine((val) => val === true, 'You must accept the declaration'),
-  lunch_required: z.string().min(1, 'Lunch preference is required'),
-  companion_option: z.string().min(1, 'Companion option is required'),
 });
 
 export default function GraduationRegistrationForm() {
@@ -105,8 +101,6 @@ export default function GraduationRegistrationForm() {
       occupation: '',
       address: '',
       declaration: false,
-      lunch_required: '',
-      companion_option: '',
     },
   });
 
@@ -144,8 +138,6 @@ export default function GraduationRegistrationForm() {
             is_registered_graduate: String(data.is_registered_graduate),
             occupation: data.occupation,
             address: data.address,
-            lunch_required: data.lunch_required,
-            companion_option: data.companion_option,
             declaration: Boolean(data.declaration)
           });
 
@@ -920,47 +912,7 @@ export default function GraduationRegistrationForm() {
                   />
                   {errors.signature && <p className="text-red-600 text-sm mt-1">{errors.signature.message}</p>}
                 </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 3.0 }}
-                >
-                  <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                    <FaUtensils className="text-blue-600 text-2xl" />
-                    Lunch Preference
-                  </label>
-                  <select
-                    {...register('lunch_required')}
-                    className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                  >
-                    <option value="">-- Select Lunch Preference --</option>
-                    {LUNCH_OPTIONS.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  {errors.lunch_required && <p className="text-red-600 text-sm mt-1">{errors.lunch_required.message}</p>}
-                </motion.div>
               </div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 3.1 }}
-              >
-                <label className="block text-blue-800 font-semibold mb-2 flex items-center gap-3 text-lg font-poppins">
-                  <FaUser className="text-blue-600 text-2xl" />
-                  Companion Option
-                </label>
-                <select
-                  {...register('companion_option')}
-                  className="w-full px-6 py-4 rounded-xl bg-gray-50 border border-blue-200 focus:outline-none focus:ring-4 focus:ring-blue-400 transition-all duration-300 font-poppins text-blue-900 text-lg"
-                >
-                  <option value="">-- Select Companion Option --</option>
-                  {COMPANION_OPTIONS.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-                {errors.companion_option && <p className="text-red-600 text-sm mt-1">{errors.companion_option.message}</p>}
-              </motion.div>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
